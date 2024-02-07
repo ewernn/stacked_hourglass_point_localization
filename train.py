@@ -111,7 +111,7 @@ def train(train_func, config, post_epoch=None):
     # Initialize your CoordinateDataset and DataLoader here
     im_sz = config['inference']['inp_dim']
     train_dataset = CoordinateDataset(root_dir=train_dir, im_sz=im_sz,\
-            output_res=heatmap_res, augment=True, only10=config['opt']['only10'])
+            output_res=heatmap_res, augment=False, only10=config['opt']['only10'])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
     #train_loader = DataLoader(train_dataset, batch_size=config['train']['batchsize'], shuffle=True, num_workers=4)
 

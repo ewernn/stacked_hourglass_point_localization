@@ -15,10 +15,10 @@ __config__ = {
     'data_provider': 'data.MPII.dp',
     'network': 'models.posenet.PoseNet',
     'inference': {
-        'nstack': 8,
+        'nstack': 2,
         'inp_dim': 300,
-        'oup_dim': 6,
-        'num_parts': 6,
+        'oup_dim': 12,
+        'num_parts': 12,
         'increase': 0,
         'keys': ['imgs']
     },
@@ -67,8 +67,8 @@ class Trainer(nn.Module):
             return self.model(imgs, **inps)
         else:
             combined_hm_preds = self.model(imgs, **inps)
-            if type(combined_hm_preds)!=list and type(combined_hm_preds)!=tuple:
-                combined_hm_preds = [combined_hm_preds]
+            # if type(combined_hm_preds)!=list and type(combined_hm_preds)!=tuple:
+            #     combined_hm_preds = [combined_hm_preds]
             true_heatmaps = labels['heatmaps']
             loss = self.calc_loss(combined_hm_preds, true_heatmaps)
 
