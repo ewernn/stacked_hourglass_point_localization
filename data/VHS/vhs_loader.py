@@ -33,7 +33,7 @@ class CoordinateDataset(Dataset):
 
     def __getitem__(self, idx):
         image = self.images[idx]
-        points = self.data_frame.iloc[idx, 1:].values.astype('float').reshape(-1, 2)
+        points = self.data_frame.iloc[idx, 1:].values.astype('float')#.reshape(-1, 2)
 
         if self.augment:
             image, points = custom_transform(image, points)
@@ -45,12 +45,13 @@ class CoordinateDataset(Dataset):
         ])(image)
 
         image_tensor = F.pad(image_tensor, (0, 1, 0, 1), value=0)
+        return image_tensor, torch.tensor(points)#.reshape(-1)
 
-        heatmaps = self.generate_heatmaps(points, self.output_res)
+        # heatmaps = self.generate_heatmaps(points, self.output_res)
 
-        if self.testing: return image_tensor, points
+        # if self.testing: return image_tensor, points
 
-        return image_tensor, heatmaps
+        # return image_tensor, heatmaps
 
     def generate_heatmaps(self, points, output_res):
         num_keypoints = len(points)

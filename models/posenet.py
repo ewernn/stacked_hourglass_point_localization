@@ -1,90 +1,81 @@
 import torch
-from torch import nn
-from models.layers import Conv, Hourglass, Pool, Residual
-from task.loss import HeatmapLoss
-import matplotlib.pyplot as plt
-import numpy as np
+import torch.nn as nn
+import torch.nn.functional as F
 
-class UnFlatten(nn.Module):
-    def forward(self, input):
-        return input.view(-1, 256, 4, 4)
-
-class Merge(nn.Module):
-    def __init__(self, x_dim, y_dim):
-        super(Merge, self).__init__()
-        self.conv = Conv(x_dim, y_dim, 1, relu=False, bn=False)
+class ConvBlock(nn.Module):
+    """Convolutional Block with Batch Normalization and ReLU."""
+    def __init__(self, in_channels, out_channels, kernel_size=3, stride=1, padding=1):
+        super(ConvBlock, self).__init__()
+        self.conv = nn.Conv2d(in_channels, out_channels, kernel_size, stride, padding)
+        self.bn = nn.BatchNorm2d(out_channels)
+        self.relu = nn.ReLU(inplace=True)
 
     def forward(self, x):
-        return self.conv(x)
-    
+        x = self.conv(x)
+        x = self.bn(x)
+        return self.relu(x)
+
+class HourglassModule(nn.Module):
+    """A simplified hourglass module for demonstration purposes."""
+    def __init__(self, in_channels, out_channels):
+        super(HourglassModule, self).__init__()
+        # Simplified hourglass: just downsampling then upsampling for illustration
+        self.down = ConvBlock(in_channels, out_channels, 3, 2, 1)  # Downsample
+        self.up = nn.ConvTranspose2d(out_channels, out_channels, 3, 2, 1, output_padding=1)  # Upsample
+
+    def forward(self, x):
+        down = self.down(x)
+        return self.up(down)
+
 class PoseNet(nn.Module):
-    def __init__(self, nstack, inp_dim, oup_dim, bn=False, increase=0, **kwargs):
+    def __init__(self, nstack, inp_dim, oup_dim, **kwargs):
         super(PoseNet, self).__init__()
-        
         self.nstack = nstack
+
+        # Initial preprocessing layers
         self.pre = nn.Sequential(
-            Conv(1, 64, 7, 2, bn=True, relu=True),
-            Residual(64, 128),
-            Pool(2, 2),
-            Residual(128, 128),
-            Residual(128, inp_dim)
+            ConvBlock(1, 64, 7, 2, 3),
+            ConvBlock(64, 128),
+            nn.MaxPool2d(2, 2),
+            ConvBlock(128, inp_dim),
         )
-        
-        self.hgs = nn.ModuleList( [
-        nn.Sequential(
-            Hourglass(4, inp_dim, bn, increase),
-        ) for i in range(nstack)] )
-        
-        self.features = nn.ModuleList( [
-        nn.Sequential(
-            Residual(inp_dim, inp_dim),
-            Conv(inp_dim, inp_dim, 1, bn=True, relu=True)
-        ) for i in range(nstack)] )
-        
-        self.outs = nn.ModuleList( [Conv(inp_dim, oup_dim, 1, relu=False, bn=False) for i in range(nstack)] )
-        self.merge_features = nn.ModuleList( [Merge(inp_dim, inp_dim) for i in range(nstack-1)] )
-        self.merge_preds = nn.ModuleList( [Merge(oup_dim, inp_dim) for i in range(nstack-1)] )
-        self.nstack = nstack
-        self.heatmapLoss = HeatmapLoss()
+
+        # Stacked hourglass modules for deep feature extraction
+        self.hgs = nn.ModuleList([
+            HourglassModule(inp_dim, inp_dim) for _ in range(nstack)
+        ])
+
+        # Output layers for converting spatial info to coordinate predictions
+        self.outs = nn.ModuleList([
+            nn.Sequential(
+                nn.AdaptiveAvgPool2d((1, 1)),
+                nn.Flatten(),
+                nn.Linear(inp_dim, oup_dim),
+            ) for _ in range(nstack)
+        ])
+
+        # Inter-stack feature merging, ensuring dimensional compatibility
+        self.merge_features = nn.ModuleList([
+            ConvBlock(inp_dim + oup_dim, inp_dim, 1, 1, 0) for _ in range(nstack-1)
+        ])
 
     def forward(self, imgs):
-        ## our posenet
-        # x = imgs.permute(0, 3, 1, 2) #x of size 1,3,inpdim,inpdim
         x = self.pre(imgs)
-        combined_hm_preds = []
+        combined_preds = []
+
         for i in range(self.nstack):
             hg = self.hgs[i](x)
-            feature = self.features[i](hg)
-            preds = self.outs[i](feature)
-            combined_hm_preds.append(preds)
+
+            # Transition to predictions
+            pooled = F.adaptive_avg_pool2d(hg, (1, 1))
+            flat = pooled.view(pooled.size(0), -1)
+            preds = self.outs[i](flat)
+            combined_preds.append(preds)
+
             if i < self.nstack - 1:
-                x = x + self.merge_preds[i](preds) + self.merge_features[i](feature)
-        return torch.stack(combined_hm_preds, 1)
+                # Prepare for feature merging
+                preds_reshaped = preds.view(preds.size(0), -1, 1, 1).expand(-1, -1, hg.size(2), hg.size(3))
+                merged = torch.cat([hg, preds_reshaped], dim=1)
+                x = self.merge_features[i](merged)
 
-    # def heatmapLoss.forward(self, pred, gt):
-    #     l = ((pred - gt)**2)
-    #     l = l.mean(dim=3).mean(dim=2).mean(dim=1)
-    #     return l
-    def calc_loss(self, combined_hm_preds, heatmaps):
-        combined_total_loss = []
-        combined_basic_loss = []
-        combined_focused_loss = []
-
-        for i in range(self.nstack):
-            loss_outputs = self.heatmapLoss(combined_hm_preds[0][:,i], heatmaps)
-            combined_total_loss.append(loss_outputs["total_loss"])
-            combined_basic_loss.append(loss_outputs["basic_loss"])
-            combined_focused_loss.append(loss_outputs["focused_loss"])
-
-        # Stack the total, basic, and focused losses separately
-        combined_total_loss = torch.stack(combined_total_loss, dim=1)
-        combined_basic_loss = torch.stack(combined_basic_loss, dim=1)
-        combined_focused_loss = torch.stack(combined_focused_loss, dim=0)
-
-        # Return a dictionary containing the combined losses
-        return {
-            "combined_total_loss": combined_total_loss,
-            "combined_basic_loss": combined_basic_loss,
-            "combined_focused_loss": combined_focused_loss
-        }
-
+        return torch.stack(combined_preds, dim=1)
