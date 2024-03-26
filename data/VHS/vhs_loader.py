@@ -14,6 +14,10 @@ import scipy.ndimage as ndimage
 import torchvision.transforms.functional as TF
 import torch.nn.functional as F
 
+def image_open_bw(img_path):
+    with Image.open(img_path) as img:
+        return img.convert('L')
+
 class CoordinateDataset(Dataset):
     def __init__(self, root_dir, im_sz, output_res, augment=False, num_workers=32, only10=False, testing=False):
         self.root_dir = root_dir
@@ -26,7 +30,7 @@ class CoordinateDataset(Dataset):
 
         image_paths = [os.path.join(self.root_dir, img_name) for img_name in self.data_frame.iloc[:, 0]]
         with Pool(num_workers) as pool:
-            self.images = list(tqdm(pool.imap(Image.open, image_paths), total=len(image_paths)))
+            self.images = list(tqdm(pool.imap(image_open_bw, image_paths), total=len(image_paths)))
 
     def __len__(self):
         return len(self.data_frame)
