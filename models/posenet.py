@@ -88,6 +88,7 @@ class PoseNet(nn.Module):
             # focused_loss = ((lateral_pred - lateral_gt)**2).mean(dim=2).mean(dim=1) * 0.2
             # total_loss = basic_loss + focused_loss
             return {'total_loss': total_loss}#, 'basic_loss': basic_loss, 'focused_loss': focused_loss}
+    exp_path = '/content/drive/MyDrive/MM/EqNeck3pts/exps'
 
         combined_total_loss = []
         combined_basic_loss = []
