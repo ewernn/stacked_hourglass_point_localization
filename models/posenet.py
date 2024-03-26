@@ -74,11 +74,11 @@ class PoseNet(nn.Module):
             # gt shape:  [bs, oup_dim, output_res, output_res]
 
 
-            weights = torch.tensor([1.1, 1.1, 1, 1, 1, 1]).view(1, -1, 1, 1)
+            #weights = torch.tensor([1.1, 1.1, 1, 1, 1, 1]).view(1, -1, 1, 1)
             # Ensure weights are on the same device as your predictions (e.g., CPU or CUDA)
-            weights = weights.to(pred.device)
+            #weights = weights.to(pred.device)
             # Calculate weighted squared differences
-            weighted_squared_diff = (pred - gt)**2 * weights
+            weighted_squared_diff = (pred - gt)**2# * weights
             # Compute the mean, taking into account the weighted differences
             total_loss = weighted_squared_diff.mean(dim=3).mean(dim=2).mean(dim=1)
 
