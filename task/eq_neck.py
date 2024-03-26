@@ -17,8 +17,8 @@ __config__ = {
     'inference': {
         'nstack': 4,
         'inp_dim': 300,
-        'oup_dim': 6,
-        'num_parts': 6,
+        'oup_dim': 3,
+        'num_parts': 3,
         'increase': 0,
         'keys': ['imgs']
     },
@@ -94,7 +94,7 @@ def make_network(configs):
     train_cfg['optimizer'] = torch.optim.Adam(filter(lambda p: p.requires_grad, config['net'].parameters()), lr=learning_rate)
     
     ## optimizer, experiment setup
-    exp_path = '/content/drive/MyDrive/point_localization/exps'
+    exp_path = '/content/drive/MyDrive/MM/EqNeck3pts/exps'
     if configs['opt']['continue_exp'] is not None:  # don't overwrite the original exp I guess ??
         exp_path = os.path.join(exp_path, configs['opt']['continue_exp'])
     else:
