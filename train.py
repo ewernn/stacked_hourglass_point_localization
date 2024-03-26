@@ -37,11 +37,11 @@ sweep_config = {
     },
     'parameters': {
         'learning_rate': {
-            'min': 0.00005,
-            'max': 0.001
+            'min': 0.00002,
+            'max': 0.0002
         },
         'batch_size': {
-            'values': [4]
+            'values': [2,4]
         },
         # Add other hyperparameters here
     }
