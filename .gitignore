@@ -13,6 +13,9 @@ tmp
 exp
 data/VHS/VHS-Top-5286-Eric/*
 data/VHS/.DS_Store
-data/EqNeck
+data/EqNeck/EqNeckData
 models/local_models/
 preaugment_data.py
+
+.DS_Store
+data/.DS_Store
