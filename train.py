@@ -172,7 +172,7 @@ def train(train_func, config, post_epoch=None):
 
 def init(opt):
     # opt is now passed as an argument
-    task = importlib.import_module('task.heart')
+    task = importlib.import_module('task.eq_neck')
     config = task.__config__
 
     opt_dict = vars(opt)
