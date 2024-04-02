@@ -82,11 +82,6 @@ class PoseNet(nn.Module):
             # Compute the mean, taking into account the weighted differences
             total_loss = weighted_squared_diff.mean(dim=3).mean(dim=2).mean(dim=1)
 
-            # basic_loss = ((pred - gt)**2).mean(dim=3).mean(dim=2).mean(dim=1)  # shape: [batch_size]
-            # lateral_pred = pred[:, :2, :, -1] 
-            # lateral_gt = gt[:, :2, :, -1]
-            # focused_loss = ((lateral_pred - lateral_gt)**2).mean(dim=2).mean(dim=1) * 0.2
-            # total_loss = basic_loss + focused_loss
             return {'total_loss': total_loss}#, 'basic_loss': basic_loss, 'focused_loss': focused_loss}
 
         combined_total_loss = []
