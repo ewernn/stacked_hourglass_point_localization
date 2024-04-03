@@ -37,11 +37,11 @@ sweep_config = {
     },
     'parameters': {
         'learning_rate': {
-            'min': 0.00002,
-            'max': 0.0002
+            'min': 2e-5,
+            'max': 1e-6
         },
         'batch_size': {
-            'values': [2,4]
+            'values': [1,2]
         },
         # Add other hyperparameters here
     }
@@ -85,7 +85,8 @@ def save_checkpoint(state, is_best, filename='checkpoint.pt'):
 def save(config):
     config['inference']['net'].eval()
     # resume = os.path.join('exp', config['opt']['exp'])
-    resume = '/content/drive/MyDrive/MM/exps'
+    #resume = '/content/drive/MyDrive/MM/exps'
+    resume = '/home/eawern/Eq/stacked_hourglass_point_localization/exps'
     if config['opt']['continue_exp'] is not None:  # don't overwrite the original exp I guess ??
         resume = os.path.join(resume, config['opt']['continue_exp'])
     else:
@@ -105,19 +106,26 @@ def train(train_func, config, post_epoch=None):
     
     batch_size = config['train']['batch_size']  # Example of using a hyperparameter
 
-    train_dir = '/content/drive/MyDrive/MM/EqNeck3pts/Train'
-    test_dir = '/content/drive/MyDrive/MM/EqNeck3pts/Test'
+    # train_dir = '/content/drive/MyDrive/MM/EqNeck3pts/Train'
+    # test_dir = '/content/drive/MyDrive/MM/EqNeck3pts/Test'
+    # train_dir = '/home/eawern/Eq/Shoulder_Data/Train'
+    # test_dir = '/home/eawern/Eq/Shoulder_Data/Validate'
+    train_dir = '/home/eawern/Eq/stacked_hourglass_point_localization/Train'
+    test_dir = '/home/eawern/Eq/stacked_hourglass_point_localization/Test'
     heatmap_res = config['train']['output_res']
     # Initialize your CoordinateDataset and DataLoader here
     im_sz = config['inference']['inp_dim']
+    print(f"making train_dataset")
     train_dataset = CoordinateDataset(root_dir=train_dir, im_sz=im_sz,\
             output_res=heatmap_res, augment=True, only10=config['opt']['only10'])
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
+    print(f"making train_loader")
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
     #train_loader = DataLoader(train_dataset, batch_size=config['train']['batchsize'], shuffle=True, num_workers=4)
 
     valid_dataset = CoordinateDataset(root_dir=test_dir, im_sz=im_sz,\
             output_res=heatmap_res, augment=False, only10=config['opt']['only10'])
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
+    print(f"making valid_loader")
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
 
     while True:
         print('epoch: ', config['train']['epoch'])
@@ -207,14 +215,14 @@ def main():
     if opt.use_wandb:
         if opt.no_sweep:
             # Track the run without a sweep
-            wandb.init(project="2hg-hyperparam-sweep", config=config)
+            wandb.init(project="equine_neck_training", config=config)
             train_func = task.make_network(config)
             reload(config)
             train(train_func, config)
             wandb.finish()
         else:
             # Use sweep
-            sweep_id = wandb.sweep(sweep_config, project="2hg-hyperparam-sweep")
+            sweep_id = wandb.sweep(sweep_config, project="equine_neck_training")
             wandb.agent(sweep_id, lambda: train_with_wandb(task, config))
     else:
         # Proceed without WandB

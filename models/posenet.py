@@ -47,19 +47,40 @@ class PoseNet(nn.Module):
         self.nstack = nstack
         #self.heatmapLoss = HeatmapLoss()
 
+    # def forward(self, imgs):
+    #     ## our posenet
+    #     # x = imgs.permute(0, 3, 1, 2) #x of size 1,3,inpdim,inpdim
+    #     x = self.pre(imgs)
+    #     combined_hm_preds = []
+    #     for i in range(self.nstack):
+    #         hg = self.hgs[i](x)
+    #         feature = self.features[i](hg)
+    #         preds = self.outs[i](feature)
+    #         combined_hm_preds.append(preds)
+    #         if i < self.nstack - 1:
+    #             x = x + self.merge_preds[i](preds) + self.merge_features[i](feature)
+    #     return torch.stack(combined_hm_preds, 1)
     def forward(self, imgs):
-        ## our posenet
-        # x = imgs.permute(0, 3, 1, 2) #x of size 1,3,inpdim,inpdim
+        #print("Input image shape:", imgs.shape)  # Print the shape of the input images # ERIC
+
         x = self.pre(imgs)
         combined_hm_preds = []
+
         for i in range(self.nstack):
             hg = self.hgs[i](x)
             feature = self.features[i](hg)
             preds = self.outs[i](feature)
+            #print(f"Shape of heatmap predictions at stack {i}:", preds.shape)  # Print the shape of heatmap predictions at each stack # ERIC
             combined_hm_preds.append(preds)
+
             if i < self.nstack - 1:
                 x = x + self.merge_preds[i](preds) + self.merge_features[i](feature)
-        return torch.stack(combined_hm_preds, 1)
+
+        combined_hm_preds_stacked = torch.stack(combined_hm_preds, 1)
+        #print("Shape of combined heatmap predictions:", combined_hm_preds_stacked.shape)  # Print the shape of combined heatmap predictions # ERIC
+
+        return combined_hm_preds_stacked
+
 
     # def heatmapLoss.forward(self, pred, gt):
     #     l = ((pred - gt)**2)
@@ -85,26 +106,16 @@ class PoseNet(nn.Module):
             return {'total_loss': total_loss}#, 'basic_loss': basic_loss, 'focused_loss': focused_loss}
 
         combined_total_loss = []
-        combined_basic_loss = []
-        combined_focused_loss = []
-
         for i in range(self.nstack):
             # for a single batch
-            #loss_outputs = self.heatmapLoss(combined_hm_preds[0][:,i], heatmaps)
             loss_outputs = heatmapLoss(combined_hm_preds[0][:,i], heatmaps)
             combined_total_loss.append(loss_outputs["total_loss"])
-            # combined_basic_loss.append(loss_outputs["basic_loss"])
-            # combined_focused_loss.append(loss_outputs["focused_loss"])
 
         # Stack the total, basic, and focused losses separately
         combined_total_loss = torch.stack(combined_total_loss, dim=1)
-        # combined_basic_loss = torch.stack(combined_basic_loss, dim=1)
-        # combined_focused_loss = torch.stack(combined_focused_loss, dim=0)
 
         # Return a dictionary containing the combined losses
         return {
-            # "combined_basic_loss": combined_basic_loss,
-            # "combined_focused_loss": combined_focused_loss,
             "combined_total_loss": combined_total_loss
         }
 

@@ -10,7 +10,7 @@ def _isArrayLike(obj):
 annot_dir = 'data/MPII/annot'
 img_dir = 'data/MPII/images'
 
-assert os.path.exists(img_dir)
+#assert os.path.exists(img_dir)
 mpii, num_examples_train, num_examples_val = None, None, None
 
 import cv2

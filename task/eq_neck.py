@@ -15,7 +15,7 @@ __config__ = {
     'data_provider': 'data.MPII.dp',
     'network': 'models.posenet.PoseNet',
     'inference': {
-        'nstack': 4,
+        'nstack': 2,
         'inp_dim': 300,
         'oup_dim': 3,
         'num_parts': 3,
@@ -24,9 +24,9 @@ __config__ = {
     },
 
     'train': {
-        'epoch_num': 300,
-        'learning_rate': .00002,#02133,
-        'batch_size': 4,
+        'epoch_num': 2,
+        'learning_rate': 5e-6,#02133,
+        'batch_size': 2,
         'input_res': 300,
         'output_res': 75,
         'train_iters': 1000,
@@ -62,17 +62,20 @@ class Trainer(nn.Module):
                 inps[i] = inputs[i]
             else:
                 labels[i] = inputs[i]
-
+        #print(f"Shape of imgs: {imgs.shape}") ERIC
         if not self.training:
-            return self.model(imgs, **inps)
+            preds = self.model(imgs, **inps)
+            # Assuming you might want to print preds shape during inference too
+            print(f"Shape of preds (inference): {preds.shape if not isinstance(preds, (list, tuple)) else [p.shape for p in preds]}")
+            return preds
         else:
             combined_hm_preds = self.model(imgs, **inps)
-            if type(combined_hm_preds)!=list and type(combined_hm_preds)!=tuple:
+            if type(combined_hm_preds) != list and type(combined_hm_preds) != tuple:
                 combined_hm_preds = [combined_hm_preds]
+            #print(f"Shape of combined_hm_preds: {[p.shape for p in combined_hm_preds]}") # ERIC
             true_heatmaps = labels['heatmaps']
             loss = self.calc_loss(combined_hm_preds, true_heatmaps)
-
-            return list(combined_hm_preds) + list([loss])
+            return list(combined_hm_preds) + [loss]
 
 def make_network(configs):
     train_cfg = configs['train']
@@ -94,7 +97,8 @@ def make_network(configs):
     train_cfg['optimizer'] = torch.optim.Adam(filter(lambda p: p.requires_grad, config['net'].parameters()), lr=learning_rate)
     
     ## optimizer, experiment setup
-    exp_path = '/content/drive/MyDrive/MM/EqNeck3pts/exps'
+    #exp_path = '/content/drive/MyDrive/MM/EqNeck3pts/exps'
+    exp_path = '/home/eawern/Eq/stacked_hourglass_point_localization/exps'
     if configs['opt']['continue_exp'] is not None:  # don't overwrite the original exp I guess ??
         exp_path = os.path.join(exp_path, configs['opt']['continue_exp'])
     else:
