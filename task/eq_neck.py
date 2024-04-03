@@ -22,11 +22,11 @@ __config__ = {
         'increase': 0,
         'keys': ['imgs']
     },
-
+# inference-time compute, gameplay-style value optimization
     'train': {
         'epoch_num': 2,
-        'learning_rate': 5e-6,#02133,
-        'batch_size': 2,
+        'learning_rate': 1e-4,
+        'batch_size': 1,
         'input_res': 300,
         'output_res': 75,
         'train_iters': 1000,
@@ -95,6 +95,13 @@ def make_network(configs):
 
     learning_rate = train_cfg['learning_rate']
     train_cfg['optimizer'] = torch.optim.Adam(filter(lambda p: p.requires_grad, config['net'].parameters()), lr=learning_rate)
+    train_cfg['scheduler'] = torch.optim.lr_scheduler.StepLR(train_cfg['optimizer'], step_size=10000, gamma=0.1)
+    train_cfg['warmup_steps'] = 3000
+    train_cfg['initial_lr'] = 1e-3  # This should match the learning rate you set for the optimizer
+    train_cfg['warmup_initial_lr'] = 1e-4  # Starting learning rate for warmup
+    train_cfg['current_step'] = 0  # To keep track of the current step across batches
+
+
     
     ## optimizer, experiment setup
     #exp_path = '/content/drive/MyDrive/MM/EqNeck3pts/exps'
@@ -135,21 +142,11 @@ def make_network(configs):
             loss_dict = result[-1]
 
             combined_total_loss = loss_dict["combined_total_loss"]
-            # combined_basic_loss = loss_dict["combined_basic_loss"]
-            # combined_focused_loss = loss_dict["combined_focused_loss"]
-
-            # toprint2 = f"a: {combined_basic_loss}"
-            # toprint3 = f"b: {combined_focused_loss}"
-            # toprint = f"c: {combined_total_loss}"
-            # logger.write(toprint)
-            # logger.write(toprint2)
-            # logger.write(toprint3)
+            # logger.write(f"c: {combined_total_loss}")
             # logger.flush()
 
             # Aggregate loss across all stacks
             total_loss = combined_total_loss.mean()
-            # basic_loss = combined_basic_loss.mean()
-            # focused_loss = combined_focused_loss.mean()
 
             # Logging
             toprint = f'\n{batch_id}: Total Loss: {total_loss.item():.8f}\n'
@@ -161,11 +158,28 @@ def make_network(configs):
             logger.flush()
 
             # Backpropagation and optimization step
+            def adjust_learning_rate_during_warmup(optimizer, train_cfg):
+                current_step = train_cfg['current_step']
+                warmup_steps = train_cfg['warmup_steps']
+                if current_step < warmup_steps:
+                    # Linear scaling of the learning rate
+                    scaled_lr = (train_cfg['initial_lr'] - train_cfg['warmup_initial_lr']) * (current_step / warmup_steps) + train_cfg['warmup_initial_lr']
+                    for param_group in optimizer.param_groups:
+                        param_group['lr'] = scaled_lr
+
+            # Inside your make_train function, before the optimizer.step() call:
             if phase == 'train':
                 optimizer = train_cfg['optimizer']
+                adjust_learning_rate_during_warmup(optimizer, train_cfg)
                 optimizer.zero_grad()
                 total_loss.backward()
                 optimizer.step()
+                train_cfg['current_step'] += 1  # Increment the step counter
+
+            # Update the scheduler after warmup is complete
+            if train_cfg['current_step'] > train_cfg['warmup_steps']:
+                train_cfg['scheduler'].step()
+
 
             # Learning rate decay
             if batch_id == config['train']['decay_iters']:
