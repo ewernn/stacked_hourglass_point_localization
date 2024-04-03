@@ -80,7 +80,7 @@ class CoordinateDataset(Dataset):
             x, y = int(points[i, 0] * output_res), int(points[i, 1] * output_res)
             if 0 <= x < output_res and 0 <= y < output_res:
                 heatmaps[i, y, x] = 1
-                heatmaps[i] = ndimage.gaussian_filter(heatmaps[i], sigma=1)
+                heatmaps[i] = ndimage.gaussian_filter(heatmaps[i], sigma=2)
         return torch.tensor(heatmaps, dtype=torch.float32)
 
 def custom_transform(image, points, degree_range=(-15, 15), translate_range=(0.1, 0.1), scale_range=(0.8, 1.2)):

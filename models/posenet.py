@@ -99,6 +99,8 @@ class PoseNet(nn.Module):
             # Ensure weights are on the same device as your predictions (e.g., CPU or CUDA)
             #weights = weights.to(pred.device)
             # Calculate weighted squared differences
+            print(f"testingggg: {type(pred), type(gt)}")
+            print(f"testingggg2: {pred.shape,gt.shape}")
             weighted_squared_diff = (pred - gt)**2# * weights
             # Compute the mean, taking into account the weighted differences
             total_loss = weighted_squared_diff.mean(dim=3).mean(dim=2).mean(dim=1)
