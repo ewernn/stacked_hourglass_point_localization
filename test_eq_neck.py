@@ -216,7 +216,8 @@ def main():
     task, config = init(opt)
     train_func = task.make_network(config)
 
-    pretrained_model_path = '/home/eawern/Eq/stacked_hourglass_point_localization/eq_2e-05_march26.pt'
+    #pretrained_model_path = '/home/eawern/Eq/stacked_hourglass_point_localization/eq_2e-05_march26.pt'
+    pretrained_model_path = '/content/drive/MyDrive/MM/exps/eq_2e-05_march26.pt'
     if config['opt']['pretrained_model'] is not None:
         pretrained_model_path = config['opt']['pretrained_model']
     if os.path.isfile(pretrained_model_path):  # Correctly check if the pretrained model exists

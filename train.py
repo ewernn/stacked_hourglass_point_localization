@@ -85,8 +85,8 @@ def save_checkpoint(state, is_best, filename='checkpoint.pt'):
 def save(config):
     config['inference']['net'].eval()
     # resume = os.path.join('exp', config['opt']['exp'])
-    #resume = '/content/drive/MyDrive/MM/exps'
-    resume = '/home/eawern/Eq/stacked_hourglass_point_localization/exps'
+    resume = '/content/drive/MyDrive/MM/exps'
+    #resume = '/home/eawern/Eq/stacked_hourglass_point_localization/exps'
     if config['opt']['continue_exp'] is not None:  # don't overwrite the original exp I guess ??
         resume = os.path.join(resume, config['opt']['continue_exp'])
     else:
@@ -106,12 +106,12 @@ def train(train_func, config, post_epoch=None):
     
     batch_size = config['train']['batch_size']  # Example of using a hyperparameter
 
-    # train_dir = '/content/drive/MyDrive/MM/EqNeck3pts/Train'
-    # test_dir = '/content/drive/MyDrive/MM/EqNeck3pts/Test'
+    train_dir = '/content/drive/MyDrive/MM/EqNeck3pts/Train'
+    test_dir = '/content/drive/MyDrive/MM/EqNeck3pts/Test'
     # train_dir = '/home/eawern/Eq/Shoulder_Data/Train'
     # test_dir = '/home/eawern/Eq/Shoulder_Data/Validate'
-    train_dir = '/home/eawern/Eq/stacked_hourglass_point_localization/Train'
-    test_dir = '/home/eawern/Eq/stacked_hourglass_point_localization/Test'
+    # train_dir = '/home/eawern/Eq/stacked_hourglass_point_localization/Train'
+    # test_dir = '/home/eawern/Eq/stacked_hourglass_point_localization/Test'
     heatmap_res = config['train']['output_res']
     # Initialize your CoordinateDataset and DataLoader here
     im_sz = config['inference']['inp_dim']
