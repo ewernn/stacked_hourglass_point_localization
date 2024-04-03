@@ -95,10 +95,10 @@ def make_network(configs):
 
     learning_rate = train_cfg['learning_rate']
     train_cfg['optimizer'] = torch.optim.Adam(filter(lambda p: p.requires_grad, config['net'].parameters()), lr=learning_rate)
-    train_cfg['scheduler'] = torch.optim.lr_scheduler.StepLR(train_cfg['optimizer'], step_size=10000, gamma=0.1)
-    train_cfg['warmup_steps'] = 3000
+    train_cfg['scheduler'] = torch.optim.lr_scheduler.StepLR(train_cfg['optimizer'], step_size=2000, gamma=0.4)
+    train_cfg['warmup_steps'] = 0
     train_cfg['initial_lr'] = 1e-3  # This should match the learning rate you set for the optimizer
-    train_cfg['warmup_initial_lr'] = 1e-4  # Starting learning rate for warmup
+    train_cfg['warmup_initial_lr'] = 1e-5  # Starting learning rate for warmup
     train_cfg['current_step'] = 0  # To keep track of the current step across batches
 
 
@@ -138,6 +138,7 @@ def make_network(configs):
         if phase != 'inference':
             result = net(inputs['imgs'], **{i:inputs[i] for i in inputs if i!='imgs'})
             # Assuming result[0] are the predictions and result[1] are the losses
+            #print(f"type of result: {type(result)}")
             combined_hm_preds = result[:-1]
             loss_dict = result[-1]
 
@@ -194,6 +195,7 @@ def make_network(configs):
             out = {}
             net = net.eval()
             result = net(**inputs)
+            print(f"type of result: {type(result)}")
             if type(result)!=list and type(result)!=tuple:
                 result = [result]
             out['preds'] = [make_output(i) for i in result]

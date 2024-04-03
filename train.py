@@ -150,19 +150,23 @@ def train(train_func, config, post_epoch=None):
                 images, heatmaps = next(iter(loader))
                 datas = {'imgs': images, 'heatmaps': heatmaps}
                 train_outputs = train_func(i, config, phase, **datas)
+                # eric testing #
+                #combined_hm_preds = train_outputs['predictions']
 
+                # eric testing #
+ 
                 if config['opt']['use_wandb']:
                     metrics = {
                         "epoch": config['train']['epoch'],
                         "total_loss": train_outputs["total_loss"].item(),
-                        # "basic_loss": train_outputs["basic_loss"].item(),
-                        # "focused_loss": train_outputs["focused_loss"].item(),
                         "learning_rate": config['train']['learning_rate'],
                         "batch_size": config['train']['batch_size']
                     }
                     # Optionally differentiate between training and validation metrics
                     prefix = f"{phase}_"
-                    wandb.log({prefix + key: value for key, value in metrics.items()})
+                    for key, value in metrics.items():
+                        if phase == 'valid' and (key == 'batch_size' or key == 'learning_rate'): continue
+                        wandb.log({prefix + key: value})
             
             if phase == 'valid':
                 # Calculate average validation loss for the current epoch

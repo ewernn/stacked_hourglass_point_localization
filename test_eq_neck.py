@@ -15,9 +15,10 @@ def do_inference(img_tensor, model):
     # Move the input tensor to the same device as the model
     device = next(model.parameters()).device
     img_tensor = img_tensor.to(device)
-    # Forward pass
+    # # Forward pass
     with torch.no_grad():
         preds = model(img_tensor)
+    print(f"preds type: {type(preds)}")
     return preds
 
 
@@ -216,7 +217,8 @@ def main():
     task, config = init(opt)
     train_func = task.make_network(config)
 
-    pretrained_model_path = '/home/eawern/Eq/stacked_hourglass_point_localization/eq_2e-05_march26.pt'
+    #pretrained_model_path = '/home/eawern/Eq/stacked_hourglass_point_localization/eq_2e-05_march26.pt'
+    pretrained_model_path = 'exps/train_eq_lr_scheduling_10000_gamma1e-1/checkpoint_0.0001_1.pt'
     if config['opt']['pretrained_model'] is not None:
         pretrained_model_path = config['opt']['pretrained_model']
     if os.path.isfile(pretrained_model_path):  # Correctly check if the pretrained model exists
@@ -237,7 +239,9 @@ def main():
     model.eval()  # Set the model to evaluation mode
 
     #for i, (img_tensor, true_points) in enumerate(test_loader):
+    print(f"starting test_loader")
     for img_tensor, true_points in test_loader:
+        print(f"\ntesting an image with true points: \n{true_points}\n")
         preds = do_inference(img_tensor, model)
         pred_keypoints = extract_keypoints_from_heatmaps(config, preds)
 
