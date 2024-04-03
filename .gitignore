@@ -19,3 +19,9 @@ preaugment_data.py
 
 .DS_Store
 data/.DS_Store
+
+Train
+Test
+wandb
+exps
+eq_2e-05_march26.pt

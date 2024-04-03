@@ -5,6 +5,7 @@ import random
 import torch
 from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
+from torchvision.utils import save_image
 from PIL import Image
 from multiprocessing import Pool
 from tqdm import tqdm
@@ -13,6 +14,7 @@ import scipy.ndimage as ndimage
 # Assuming TF refers to torchvision.transforms.functional
 import torchvision.transforms.functional as TF
 import torch.nn.functional as F
+import torchvision.utils as vutils
 
 def image_open_bw(img_path):
     with Image.open(img_path) as img:
@@ -32,29 +34,44 @@ class CoordinateDataset(Dataset):
         with Pool(num_workers) as pool:
             self.images = list(tqdm(pool.imap(image_open_bw, image_paths), total=len(image_paths)))
 
-    def __len__(self):
-        return len(self.data_frame)
-
+    # def __getitem__(self, idx):
+    #     # Retrieve the pre-loaded image and corresponding points for the given index
+    #     image = self.images[idx]
+    #     points = self.data_frame.iloc[idx, 1:].values.astype('float').reshape(-1, 2)
+    #     # Augment both the image and the points if augmentation is enabled
+    #     if self.augment:
+    #         image, points = custom_transform(image, points)
+    #     # Convert the image to a tensor without unnecessary transformations
+    #     image_tensor = TF.to_tensor(image)
+    #     # Generate heatmaps from the provided points
+    #     heatmaps = self.generate_heatmaps(points, self.output_res)
+    #     #save_image(image_tensor, os.path.join(self.root_dir, 'exps', f"image_{idx}.png"))
+    #     save_image(image_tensor, f"/home/eawern/Eq/stacked_hourglass_point_localization/exps/eq_exps/image_{idx}.png")
+    #     # Return a tuple of the image tensor and either points or heatmaps depending on the mode
+    #     return (image_tensor, points) if self.testing else (image_tensor, heatmaps)
     def __getitem__(self, idx):
+        # Existing code to get image and points
         image = self.images[idx]
         points = self.data_frame.iloc[idx, 1:].values.astype('float').reshape(-1, 2)
-
         if self.augment:
             image, points = custom_transform(image, points)
-
-        image_tensor = transforms.Compose([
-            # transforms.Resize((self.im_sz, self.im_sz)),
-            # transforms.Grayscale(num_output_channels=3),
-            transforms.ToTensor(),
-        ])(image)
-
-        image_tensor = F.pad(image_tensor, (0, 1, 0, 1), value=0)
-
+        image_tensor = TF.to_tensor(image)
         heatmaps = self.generate_heatmaps(points, self.output_res)
+        # Existing code to save the image
+        # image_save_path = f"/home/eawern/Eq/stacked_hourglass_point_localization/exps/eq_exps/image_{idx}.png"
+        # save_image(image_tensor, image_save_path)
+        # # New code to save heatmaps
+        # for i, heatmap in enumerate(heatmaps):
+        #     heatmap_save_path = f"/home/eawern/Eq/stacked_hourglass_point_localization/exps/eq_exps/heatmap_{idx}_{i}.png"
+        #     # Add channel dimension to heatmap before saving
+        #     heatmap = heatmap.unsqueeze(0)  # From (H, W) to (C, H, W) with C=1
+        #     vutils.save_image(heatmap, heatmap_save_path)
 
-        if self.testing: return image_tensor, points
+        return (image_tensor, points) if self.testing else (image_tensor, heatmaps)
 
-        return image_tensor, heatmaps
+    def __len__(self):
+        # Return the length of the dataset
+        return len(self.images)
 
     def generate_heatmaps(self, points, output_res):
         num_keypoints = len(points)
