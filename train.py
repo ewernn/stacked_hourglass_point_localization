@@ -16,6 +16,8 @@ from data.VHS.vhs_loader import CoordinateDataset
 from torch.utils.data import DataLoader
 from models.layers import Hourglass
 
+import matplotlib.pyplot as plt
+
 
 def parse_command_line():
     parser = argparse.ArgumentParser()
@@ -153,7 +155,19 @@ def train(train_func, config, post_epoch=None):
                 datas = {'imgs': images, 'heatmaps': heatmaps}
                 train_outputs = train_func(i, config, phase, **datas)
                 # eric testing #
-                #combined_hm_preds = train_outputs['predictions']
+                #print(f"train_outputs type: {type(train_outputs)}")
+                combined_hm_preds = train_outputs['predictions']
+                #print(f"combined_hm_preds len: {len(combined_hm_preds)}")
+                #print(f"combined_hm_preds[0].shape: {combined_hm_preds[0].shape}")
+                hms = combined_hm_preds[0][0,0]
+                if i%1000 == 0:  # every 1000 steps, save a heatmap and print the loss
+                    for j,hm in enumerate(hms):
+                        plt.imshow(hm.cpu().detach().numpy(), cmap='hot', interpolation='nearest')
+                        plt.savefig(os.path.join('/home/eawern/Eq/stacked_hourglass_point_localization/exps', f'HEATMAP_{i}_{j}.png'))
+                    for j,real_hm in enumerate(heatmaps[0]):
+                        plt.imshow(real_hm.cpu().detach().numpy(), cmap='hot', interpolation='nearest')
+                        plt.savefig(os.path.join('/home/eawern/Eq/stacked_hourglass_point_localization/exps', f'HEATMAP_{i}_{j}_REAL.png'))
+                    print(f'train_outputs["total_loss"]: {train_outputs["total_loss"]}')
 
                 # eric testing #
  
