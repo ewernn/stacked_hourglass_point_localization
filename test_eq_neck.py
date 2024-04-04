@@ -19,6 +19,7 @@ def do_inference(img_tensor, model):
     with torch.no_grad():
         preds = model(img_tensor)
     print(f"preds type: {type(preds)}")
+    print(f"preds shape: {preds.shape}")
     return preds
 
 

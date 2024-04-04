@@ -1,3 +1,4 @@
+import os
 import torch
 from torch import nn
 from models.layers import Conv, Hourglass, Pool, Residual
@@ -47,65 +48,42 @@ class PoseNet(nn.Module):
         self.nstack = nstack
         #self.heatmapLoss = HeatmapLoss()
 
-    # def forward(self, imgs):
-    #     ## our posenet
-    #     # x = imgs.permute(0, 3, 1, 2) #x of size 1,3,inpdim,inpdim
-    #     x = self.pre(imgs)
-    #     combined_hm_preds = []
-    #     for i in range(self.nstack):
-    #         hg = self.hgs[i](x)
-    #         feature = self.features[i](hg)
-    #         preds = self.outs[i](feature)
-    #         combined_hm_preds.append(preds)
-    #         if i < self.nstack - 1:
-    #             x = x + self.merge_preds[i](preds) + self.merge_features[i](feature)
-    #     return torch.stack(combined_hm_preds, 1)
     def forward(self, imgs):
         #print("Input image shape:", imgs.shape)  # Print the shape of the input images # ERIC
-
         x = self.pre(imgs)
         combined_hm_preds = []
-
+        imgs_to_display = imgs[0].cpu().detach().numpy()
+        imgs_to_display = np.repeat(imgs_to_display[0][np.newaxis, :, :], 3, axis=0)
+        plt.imshow(np.transpose(imgs_to_display, (1, 2, 0)), cmap='gray')
+        plt.savefig(os.path.join('/home/eawern/Eq/stacked_hourglass_point_localization/exps', f'orig_image.png'))
         for i in range(self.nstack):
             hg = self.hgs[i](x)
             feature = self.features[i](hg)
             preds = self.outs[i](feature)
             #print(f"Shape of heatmap predictions at stack {i}:", preds.shape)  # Print the shape of heatmap predictions at each stack # ERIC
             combined_hm_preds.append(preds)
-
             if i < self.nstack - 1:
                 x = x + self.merge_preds[i](preds) + self.merge_features[i](feature)
-
         combined_hm_preds_stacked = torch.stack(combined_hm_preds, 1)
         #print("Shape of combined heatmap predictions:", combined_hm_preds_stacked.shape)  # Print the shape of combined heatmap predictions # ERIC
-
         return combined_hm_preds_stacked
 
-
-    # def heatmapLoss.forward(self, pred, gt):
-    #     l = ((pred - gt)**2)
-    #     l = l.mean(dim=3).mean(dim=2).mean(dim=1)
-    #     return l
     def calc_loss(self, combined_hm_preds, heatmaps):
-        # combined_hm_preds shape: [bs, nstack, oup_dim, output_res, output_res]
-        # heatmaps shape: [bs, oup_dim, output_res, output_res]
 
         def heatmapLoss(pred, gt):
-            # pred shape: [bs, oup_dim, output_res, output_res]
-            # gt shape:  [bs, oup_dim, output_res, output_res]
-
-
-            #weights = torch.tensor([1.1, 1.1, 1, 1, 1, 1]).view(1, -1, 1, 1)
-            # Ensure weights are on the same device as your predictions (e.g., CPU or CUDA)
-            #weights = weights.to(pred.device)
             # Calculate weighted squared differences
-            print(f"testingggg: {type(pred), type(gt)}")
-            print(f"testingggg2: {pred.shape,gt.shape}")
-            weighted_squared_diff = (pred - gt)**2# * weights
-            # Compute the mean, taking into account the weighted differences
-            total_loss = weighted_squared_diff.mean(dim=3).mean(dim=2).mean(dim=1)
+            #print(f"ERICCCCCCCCC: {pred.shape}")
+            import matplotlib.pyplot as plt
+            import os
+            # Save the heatmaps as images
+            # for idx, hm in enumerate([pred[0,0],pred[0,1],pred[0,2],gt[0,0],gt[0,1],gt[0,2]]):
+            #     plt.imshow(hm.cpu().detach().numpy(), cmap='hot', interpolation='nearest')
+            #     plt.savefig(os.path.join('/home/eawern/Eq/stacked_hourglass_point_localization/exps', f'heatmap_{idx}_pred.png'))
 
-            return {'total_loss': total_loss}#, 'basic_loss': basic_loss, 'focused_loss': focused_loss}
+            weighted_squared_diff = (pred - gt)**2
+            total_loss = weighted_squared_diff.mean(dim=3).mean(dim=2).mean(dim=1)
+            print(f"total_loss: {total_loss}")
+            return {'total_loss': total_loss}
 
         combined_total_loss = []
         for i in range(self.nstack):

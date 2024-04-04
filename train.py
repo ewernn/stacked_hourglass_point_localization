@@ -119,13 +119,13 @@ def train(train_func, config, post_epoch=None):
     train_dataset = CoordinateDataset(root_dir=train_dir, im_sz=im_sz,\
             output_res=heatmap_res, augment=True, only10=config['opt']['only10'])
     print(f"making train_loader")
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=2)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=1)
     #train_loader = DataLoader(train_dataset, batch_size=config['train']['batchsize'], shuffle=True, num_workers=4)
 
     valid_dataset = CoordinateDataset(root_dir=test_dir, im_sz=im_sz,\
             output_res=heatmap_res, augment=False, only10=config['opt']['only10'])
     print(f"making valid_loader")
-    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=2)
+    valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=1)
 
     while True:
         print('epoch: ', config['train']['epoch'])
@@ -145,9 +145,11 @@ def train(train_func, config, post_epoch=None):
 
             print('start', phase, config['opt']['exp'])
 
-            show_range = tqdm.tqdm(range(num_step), total=num_step, ascii=True)
-            for i in show_range:
-                images, heatmaps = next(iter(loader))
+            show_range = tqdm.tqdm(loader, total=num_step, ascii=True)
+            for i, (images, heatmaps, invalid_points_bool) in enumerate(show_range):
+                #print(f"i: {i}")
+                if invalid_points_bool: continue # points are invalid
+
                 datas = {'imgs': images, 'heatmaps': heatmaps}
                 train_outputs = train_func(i, config, phase, **datas)
                 # eric testing #
