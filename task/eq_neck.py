@@ -66,7 +66,7 @@ class Trainer(nn.Module):
         if not self.training:
             preds = self.model(imgs, **inps)
             # Assuming you might want to print preds shape during inference too
-            print(f"Shape of preds (inference): {preds.shape if not isinstance(preds, (list, tuple)) else [p.shape for p in preds]}")
+            #print(f"Shape of preds (inference): {preds.shape if not isinstance(preds, (list, tuple)) else [p.shape for p in preds]}")
             return preds
         else:
             combined_hm_preds = self.model(imgs, **inps)
@@ -75,7 +75,13 @@ class Trainer(nn.Module):
             #print(f"Shape of combined_hm_preds: {[p.shape for p in combined_hm_preds]}") # ERIC
             true_heatmaps = labels['heatmaps']
             loss = self.calc_loss(combined_hm_preds, true_heatmaps)
+            
+            # print(f"Shape of true_heatmaps: {true_heatmaps.shape}")
+            # print(f"Shape of combined_hm_preds: {combined_hm_preds[0].shape}")
+            # print(f"Shape of loss: {loss['combined_total_loss'].shape}")
+            # print(f"Shape of output: {len(list(combined_hm_preds) + [loss])}")
             return list(combined_hm_preds) + [loss]
+#######################################################################
 
 def make_network(configs):
     train_cfg = configs['train']
@@ -122,6 +128,7 @@ def make_network(configs):
                 inputs[i] = make_input(inputs[i])
             except:
                 pass #for last input, which is a string (id_)
+        #print(f"ericcc: \n{inputs['imgs'].shape}")
                 
         net = config['inference']['net']
         config['batch_id'] = batch_id
@@ -134,7 +141,9 @@ def make_network(configs):
             for module in net.modules():
                 if isinstance(module, nn.BatchNorm2d):
                     module.eval()
-#  ERIC: which phase is being used??
+        #  ERIC: which phase is being used??
+        
+        
         if phase != 'inference':
             result = net(inputs['imgs'], **{i:inputs[i] for i in inputs if i!='imgs'})
             # Assuming result[0] are the predictions and result[1] are the losses
