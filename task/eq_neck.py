@@ -11,6 +11,8 @@ from utils.misc import make_input, make_output, importNet
 
 import matplotlib.pyplot as plt
 
+import random
+
 __config__ = {
     'data_provider': 'data.MPII.dp',
     'network': 'models.posenet.PoseNet',
@@ -24,7 +26,7 @@ __config__ = {
     },
 # inference-time compute, gameplay-style value optimization
     'train': {
-        'epoch_num': 2,
+        'epoch_num': 10,
         'learning_rate': 1e-4,
         'batch_size': 1,
         'input_res': 300,
@@ -62,7 +64,7 @@ class Trainer(nn.Module):
                 inps[i] = inputs[i]
             else:
                 labels[i] = inputs[i]
-        #print(f"Shape of imgs: {imgs.shape}") ERIC
+        # print(f"Shape of imgs: {imgs.shape}") #ERIC -> [bs,1,300,300]
         if not self.training:
             preds = self.model(imgs, **inps)
             # Assuming you might want to print preds shape during inference too
@@ -75,6 +77,17 @@ class Trainer(nn.Module):
             #print(f"Shape of combined_hm_preds: {[p.shape for p in combined_hm_preds]}") # ERIC
             true_heatmaps = labels['heatmaps']
             loss = self.calc_loss(combined_hm_preds, true_heatmaps)
+
+            if random.random() > .99:
+                randint = random.randint(1, 20)
+                print(f"core loss: {loss} randint={randint}")
+                # Save the heatmaps
+                for idx, hm in enumerate(true_heatmaps.cpu().detach().numpy()):
+                    plt.imshow(hm[0], cmap='hot', interpolation='nearest')
+                    plt.savefig(os.path.join('/home/eawern/Eq/stacked_hourglass_point_localization/exps', f'hm_real_{idx}_{randint}.png'))
+                for idx, hm in enumerate(combined_hm_preds[0][0].cpu().detach().numpy()):
+                    plt.imshow(hm[0], cmap='hot', interpolation='nearest')
+                    plt.savefig(os.path.join('/home/eawern/Eq/stacked_hourglass_point_localization/exps', f'hm_pred_{idx}_{randint}.png'))
             
             # print(f"Shape of true_heatmaps: {true_heatmaps.shape}")
             # print(f"Shape of combined_hm_preds: {combined_hm_preds[0].shape}")
@@ -103,7 +116,8 @@ def make_network(configs):
     train_cfg['optimizer'] = torch.optim.Adam(filter(lambda p: p.requires_grad, config['net'].parameters()), lr=learning_rate)
     train_cfg['scheduler'] = torch.optim.lr_scheduler.StepLR(train_cfg['optimizer'], step_size=2000, gamma=0.4)
     train_cfg['warmup_steps'] = 0
-    train_cfg['initial_lr'] = 1e-3  # This should match the learning rate you set for the optimizer
+    #train_cfg['initial_lr'] = 1e-3  # This should match the learning rate you set for the optimizer
+    train_cfg['initial_lr'] = 1e-5  # This should match the learning rate you set for the optimizer
     train_cfg['warmup_initial_lr'] = 1e-5  # Starting learning rate for warmup
     train_cfg['current_step'] = 0  # To keep track of the current step across batches
 
@@ -196,8 +210,6 @@ def make_network(configs):
                 for param_group in optimizer.param_groups:
                     param_group['learning_rate'] = config['train']['decay_lr']
             return {"total_loss": total_loss,
-                    # "basic_loss": basic_loss,
-                    # "focused_loss": focused_loss,
                     "predictions": combined_hm_preds}
 
         else:

@@ -189,16 +189,19 @@ def draw_predictions(img_tensor, pred_keypoints, true_points, config, save_path=
 def extract_keypoints_from_heatmaps(config, heatmaps):
     # No change up to this point
     # Extract the last stack heatmaps
-    last_stack_heatmaps = heatmaps[:, -1, :, :, :]  # [batch_size, oup_dim, height, width]
+    #print(f"heatmaps shape!: {heatmaps.shape}")
+    last_stack_heatmaps = heatmaps[:, -1, :, :, :]
+    #print(f"last_stack_heatmaps shape!: {last_stack_heatmaps.shape}")
     
     # Correctly flattening the spatial dimensions
     # Flatten just the last two dimensions (75*75)
     last_stack_heatmaps_flat = last_stack_heatmaps.reshape(last_stack_heatmaps.size(0), last_stack_heatmaps.size(1), -1)
-    print("last_stack_heatmaps shape:", last_stack_heatmaps.shape)
-    print("last_stack_heatmaps_flat shape:", last_stack_heatmaps_flat.shape)
+    #print("last_stack_heatmaps shape:", last_stack_heatmaps.shape)
+    #print("last_stack_heatmaps_flat shape:", last_stack_heatmaps_flat.shape)
 
     # Now find the max value and its index for each keypoint
     maxval, idx = torch.max(last_stack_heatmaps_flat, dim=2)
+    #print(f"maxval shape: {maxval.shape}")
     
     # Convert indices to 2D coordinates
     x = (idx % heatmaps.size(3)).float() / heatmaps.size(3)  # Normalize X
@@ -219,7 +222,7 @@ def main():
     train_func = task.make_network(config)
 
     #pretrained_model_path = '/home/eawern/Eq/stacked_hourglass_point_localization/eq_2e-05_march26.pt'
-    pretrained_model_path = 'exps/train_eq_lr_scheduling_10000_gamma1e-1/checkpoint_0.0001_1.pt'
+    pretrained_model_path = 'exps/eq_filtered/checkpoint_1e-05_1.pt'
     if config['opt']['pretrained_model'] is not None:
         pretrained_model_path = config['opt']['pretrained_model']
     if os.path.isfile(pretrained_model_path):  # Correctly check if the pretrained model exists
@@ -241,8 +244,9 @@ def main():
 
     #for i, (img_tensor, true_points) in enumerate(test_loader):
     print(f"starting test_loader")
-    for img_tensor, true_points in test_loader:
-        print(f"\ntesting an image with true points: \n{true_points}\n")
+    for img_tensor, true_points, invalid_points_bool in test_loader:
+        if invalid_points_bool: continue
+        #print(f"\ntesting an image with true points: \n{true_points}\n")
         preds = do_inference(img_tensor, model)
         pred_keypoints = extract_keypoints_from_heatmaps(config, preds)
 
@@ -257,9 +261,11 @@ def main():
         # save_path = '/home/eawern/Eq/stacked_hourglass_point_localization/exps/eq_exps'
         
         # draw_predictions(img_tensor[0], pred_keypoints, true_points, config, save_path=save_path)
-
-        # mse = torch.mean((pred_keypoints_scaled - true_points.clone()[0]) ** 2).item()
-        # print(f"MSE for image {save_path}: {mse}")
+        print(f"abc: {pred_keypoints.shape}, {true_points.shape}")
+        print(f"abc: {pred_keypoints[:,:,:2].shape}, {true_points.shape}")
+        mse = torch.mean((pred_keypoints.cpu()[:,:,:2] - true_points) ** 2).item()
+        print(f"pred_keypoints: {pred_keypoints}, true_points: {true_points}")
+        print(f"MSE for image: {mse}\n")
 
         save_path = '/home/eawern/Eq/stacked_hourglass_point_localization/exps/eq_exps/out.png'
         draw_predictions_with_heatmaps(img_tensor[0], pred_keypoints, true_points, config, preds, save_path=save_path)

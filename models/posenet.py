@@ -5,6 +5,7 @@ from models.layers import Conv, Hourglass, Pool, Residual
 from task.loss import HeatmapLoss
 import matplotlib.pyplot as plt
 import numpy as np
+import random
 
 class UnFlatten(nn.Module):
     def forward(self, input):
@@ -54,8 +55,8 @@ class PoseNet(nn.Module):
         combined_hm_preds = []
         imgs_to_display = imgs[0].cpu().detach().numpy()
         imgs_to_display = np.repeat(imgs_to_display[0][np.newaxis, :, :], 3, axis=0)
-        plt.imshow(np.transpose(imgs_to_display, (1, 2, 0)), cmap='gray')
-        plt.savefig(os.path.join('/home/eawern/Eq/stacked_hourglass_point_localization/exps', f'orig_image.png'))
+        # plt.imshow(np.transpose(imgs_to_display, (1, 2, 0)), cmap='gray')
+        # plt.savefig(os.path.join('/home/eawern/Eq/stacked_hourglass_point_localization/exps', f'orig_image.png'))
         for i in range(self.nstack):
             hg = self.hgs[i](x)
             feature = self.features[i](hg)
@@ -71,18 +72,56 @@ class PoseNet(nn.Module):
     def calc_loss(self, combined_hm_preds, heatmaps):
 
         def heatmapLoss(pred, gt):
-            # Calculate weighted squared differences
-            #print(f"ERICCCCCCCCC: {pred.shape}")
             import matplotlib.pyplot as plt
-            import os
-            # Save the heatmaps as images
-            # for idx, hm in enumerate([pred[0,0],pred[0,1],pred[0,2],gt[0,0],gt[0,1],gt[0,2]]):
-            #     plt.imshow(hm.cpu().detach().numpy(), cmap='hot', interpolation='nearest')
-            #     plt.savefig(os.path.join('/home/eawern/Eq/stacked_hourglass_point_localization/exps', f'heatmap_{idx}_pred.png'))
 
-            weighted_squared_diff = (pred - gt)**2
-            total_loss = weighted_squared_diff.mean(dim=3).mean(dim=2).mean(dim=1)
-            print(f"total_loss: {total_loss}")
+            # print(f"pred.shape: {pred.shape}")
+            # print(f"gt.shape: {gt.shape}")
+            #weighted_squared_diff = (pred - gt)**2
+            l1_loss = torch.abs(pred - gt).mean() # OH SHIT L1 loss
+            # print(f"weighted_squared_diff.shape: {weighted_squared_diff.shape}")
+            # print(f"\n\npred.shape: {pred}\n\n")
+            # print(f"gt.shape: {gt}")
+            # print(f"\n\nweighted_squared_diff.shape: {weighted_squared_diff}")
+
+            # total_loss = weighted_squared_diff.mean(dim=3).mean(dim=2).mean(dim=1)
+            total_loss = l1_loss.unsqueeze(0)
+            # if random.random() > .99:
+            #     randint=random.randint(1,20)
+            #     # Save the heatmaps as images
+            #     for idx, hm in enumerate([pred[0,0],pred[0,1],pred[0,2],gt[0,0],gt[0,1],gt[0,2]]):
+            #         plt.imshow(hm.cpu().detach().numpy(), cmap='hot', interpolation='nearest')
+            #         plt.savefig(os.path.join('/home/eawern/Eq/stacked_hourglass_point_localization/exps', f'hm_in_loss_{randint}_{idx}.png'))
+            #         print(f"total_loss (id:{randint}): {total_loss}")
+
+
+            # # Function to plot the distribution of weighted squared differences
+            # def plot_weighted_squared_diff_distribution(weighted_squared_diff):
+            #     plt.figure(figsize=(10, 5))
+            #     with torch.no_grad():
+            #         plt.hist(weighted_squared_diff.view(-1).cpu().numpy(), bins=100, color='blue', alpha=0.7)
+            #     plt.title('Distribution of Weighted Squared Difference')
+            #     plt.xlabel('Weighted Squared Difference')
+            #     plt.ylabel('Frequency')
+            #     plt.grid(True)
+            #     plt.savefig('/home/eawern/Eq/stacked_hourglass_point_localization/exps/distribution.png')
+            #     plt.close()
+
+            # # Function to visualize the error heatmap
+            # def visualize_error_heatmap(weighted_squared_diff):
+            #     error_heatmap = weighted_squared_diff.sum(dim=1).squeeze(0)
+            #     plt.figure(figsize=(6, 6))
+            #     with torch.no_grad():
+            #         plt.imshow(error_heatmap.cpu().numpy(), cmap='hot', interpolation='nearest')
+            #     plt.title('Error Heatmap')
+            #     plt.colorbar()
+            #     plt.savefig('/home/eawern/Eq/stacked_hourglass_point_localization/exps/error_heatmap.png')
+            #     plt.close()
+
+            # plot_weighted_squared_diff_distribution(weighted_squared_diff)
+            # visualize_error_heatmap(weighted_squared_diff)
+
+
+
             return {'total_loss': total_loss}
 
         combined_total_loss = []
@@ -91,8 +130,14 @@ class PoseNet(nn.Module):
             loss_outputs = heatmapLoss(combined_hm_preds[0][:,i], heatmaps)
             combined_total_loss.append(loss_outputs["total_loss"])
 
+        # print(f"len(combined_total_loss): {len(combined_total_loss)}")
+        # print(f"combined_total_loss: {combined_total_loss}")
+
         # Stack the total, basic, and focused losses separately
         combined_total_loss = torch.stack(combined_total_loss, dim=1)
+        # print(f"shape(combined_total_loss): {combined_total_loss.shape}")
+        # print(f"combined_total_loss): {combined_total_loss}")
+
 
         # Return a dictionary containing the combined losses
         return {
