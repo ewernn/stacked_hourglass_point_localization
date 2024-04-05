@@ -261,10 +261,10 @@ def main():
         # save_path = '/home/eawern/Eq/stacked_hourglass_point_localization/exps/eq_exps'
         
         # draw_predictions(img_tensor[0], pred_keypoints, true_points, config, save_path=save_path)
-        print(f"abc: {pred_keypoints.shape}, {true_points.shape}")
-        print(f"abc: {pred_keypoints[:,:,:2].shape}, {true_points.shape}")
+        # print(f"abc: {pred_keypoints.shape}, {true_points.shape}")
+        # print(f"abc: {pred_keypoints[:,:,:2].shape}, {true_points.shape}")
         mse = torch.mean((pred_keypoints.cpu()[:,:,:2] - true_points) ** 2).item()
-        print(f"pred_keypoints: {pred_keypoints}, true_points: {true_points}")
+        #print(f"pred_keypoints: {pred_keypoints}, true_points: {true_points}")
         print(f"MSE for image: {mse}\n")
 
         save_path = '/home/eawern/Eq/stacked_hourglass_point_localization/exps/eq_exps/out.png'

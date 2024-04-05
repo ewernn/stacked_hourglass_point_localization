@@ -27,7 +27,7 @@ __config__ = {
 # inference-time compute, gameplay-style value optimization
     'train': {
         'epoch_num': 10,
-        'learning_rate': 1e-4,
+        'learning_rate': 1e-3,
         'batch_size': 1,
         'input_res': 300,
         'output_res': 75,
@@ -114,10 +114,9 @@ def make_network(configs):
 
     learning_rate = train_cfg['learning_rate']
     train_cfg['optimizer'] = torch.optim.Adam(filter(lambda p: p.requires_grad, config['net'].parameters()), lr=learning_rate)
-    train_cfg['scheduler'] = torch.optim.lr_scheduler.StepLR(train_cfg['optimizer'], step_size=2000, gamma=0.4)
-    train_cfg['warmup_steps'] = 0
-    #train_cfg['initial_lr'] = 1e-3  # This should match the learning rate you set for the optimizer
-    train_cfg['initial_lr'] = 1e-5  # This should match the learning rate you set for the optimizer
+    train_cfg['scheduler'] = torch.optim.lr_scheduler.StepLR(train_cfg['optimizer'], step_size=4000, gamma=0.5)
+    train_cfg['warmup_steps'] = 1000
+    train_cfg['initial_lr'] = 1e-3  # This should match the learning rate you set for the optimizer
     train_cfg['warmup_initial_lr'] = 1e-5  # Starting learning rate for warmup
     train_cfg['current_step'] = 0  # To keep track of the current step across batches
 
