@@ -78,6 +78,7 @@ class PoseNet(nn.Module):
             # print(f"gt.shape: {gt.shape}")
             #weighted_squared_diff = (pred - gt)**2
             l1_loss = torch.abs(pred - gt).mean() # OH SHIT L1 loss
+            #print(f"l1_loss: {l1_loss}")
             # print(f"weighted_squared_diff.shape: {weighted_squared_diff.shape}")
             # print(f"\n\npred.shape: {pred}\n\n")
             # print(f"gt.shape: {gt}")
