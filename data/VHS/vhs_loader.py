@@ -48,7 +48,7 @@ class CoordinateDataset(Dataset):
             transforms.ToTensor(),
         ])(image)
 
-        image_tensor = F.pad(image_tensor, (0, 1, 0, 1), value=0)
+        #image_tensor = F.pad(image_tensor, (0, 1, 0, 1), value=0)
 
         heatmaps = self.generate_heatmaps(points, self.output_res)
 

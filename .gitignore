@@ -19,3 +19,5 @@ preaugment_data.py
 
 .DS_Store
 data/.DS_Store
+
+data/VHS/.DS_Store
