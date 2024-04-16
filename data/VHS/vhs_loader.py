@@ -27,7 +27,7 @@ class CoordinateDataset(Dataset):
         self.output_res = output_res
         self.augment = augment
         self.testing = testing
-        csv_file = os.path.join(root_dir, 'Data.csv')
+        csv_file = os.path.join(root_dir, 'Kept_Data2.csv')
         self.data_frame = pd.read_csv(csv_file, header=0).head(10) if only10 else pd.read_csv(csv_file, header=0)
 
         image_paths = [os.path.join(self.root_dir, img_name) for img_name in self.data_frame.iloc[:, 0]]
