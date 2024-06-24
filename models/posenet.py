@@ -21,6 +21,9 @@ class PoseNet(nn.Module):
     def __init__(self, nstack, inp_dim, oup_dim, bn=False, increase=0, **kwargs):
         super(PoseNet, self).__init__()
         
+        self.inp_dim = inp_dim
+        self.oup_dim = oup_dim
+
         self.nstack = nstack
         self.pre = nn.Sequential(
             Conv(1, 64, 7, 2, bn=True, relu=True),
@@ -49,7 +52,7 @@ class PoseNet(nn.Module):
 
     def forward(self, imgs):
         ## our posenet
-        # x = imgs.permute(0, 3, 1, 2) #x of size 1,3,inpdim,inpdim
+        print(f"Input dimension: {self.inp_dim}, Output dimension: {self.oup_dim}") # Print inp_dim and oup_dim at start of forward pass
         x = self.pre(imgs)
         combined_hm_preds = []
         for i in range(self.nstack):
@@ -78,6 +81,7 @@ class PoseNet(nn.Module):
             # Ensure weights are on the same device as your predictions (e.g., CPU or CUDA)
             weights = weights.to(pred.device)
             # Calculate weighted squared differences
+            print(f"Shape of pred: {pred.shape}, Shape of gt: {gt.shape}, Shape of weights: {weights.shape}")
             weighted_squared_diff = (pred - gt)**2 * weights
             # Compute the mean, taking into account the weighted differences
             total_loss = weighted_squared_diff.mean(dim=3).mean(dim=2).mean(dim=1)
