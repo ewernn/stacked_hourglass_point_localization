@@ -90,7 +90,7 @@ def main():
     task, config = init(opt)
     train_func = task.make_network(config)
 
-    pretrained_model_path = '/content/drive/MyDrive/point_localization/exps/hg2_real/checkpoint_2.133e-05_8.pt'
+    pretrained_model_path = '/content/drive/MyDrive/MM/point_localization/exps/dog_heart_1000/checkpoint_0.0008458931568201856_4.pt'
     if config['opt']['pretrained_model'] is not None:
         pretrained_model_path = config['opt']['pretrained_model']
     if os.path.isfile(pretrained_model_path):  # Correctly check if the pretrained model exists
@@ -99,7 +99,7 @@ def main():
         state_dict = {k.replace('model.module.', 'model.'): v for k, v in checkpoint['state_dict'].items()}
         config['inference']['net'].load_state_dict(state_dict, strict=False)  # Set strict=False if the model architectures are not exactly the same
 
-    test_dir = '/content/drive/MyDrive/point_localization/VHS-Top-5286-Eric/Test'
+    test_dir = '/content/drive/MyDrive/MM/point_localization/VHS-Top-5286-Eric/Test'
     
     im_sz = config['inference']['inp_dim']
     heatmap_res = config['train']['output_res']
@@ -118,14 +118,22 @@ def main():
         pred_keypoints_scaled = pred_keypoints.clone().cpu()[:, :, :2]
         pred_keypoints_scaled *= scale_down_factor
 
+        # Print predicted and actual values
+        print(f"Image {i}:")
+        print("Predicted points:")
+        print(pred_keypoints_scaled[-1])  # Use the last stack's predictions
+        print("Actual points:")
+        print(true_points[0])  # Remove batch dimension
+
         mse = torch.mean((pred_keypoints_scaled - true_points.clone()[0]) ** 2).item()
 
-        save_dir = '/content/drive/MyDrive/point_localization/exps/hg2_pics/'
+        save_dir = '/content/drive/MyDrive/MM/point_localization/exps/dog_heart_1000/'
         save_path = os.path.join(save_dir, f'img_{i}.png')
         
         draw_predictions(img_tensor[0], pred_keypoints, true_points, config, save_path=save_path)
 
         print(f"MSE for image {save_path}: {mse}")
+        print()  # Add a blank line for better readability between images
 
 if __name__ == '__main__':
     main()
