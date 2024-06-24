@@ -102,14 +102,18 @@ def save(config):
     print(f'=> save checkpoint at {resume_file}')
 
 def train(train_func, config, post_epoch=None):
+    print("Training configuration:")
+    print(config['train'])
     
-    batch_size = config['train']['batch_size']  # Example of using a hyperparameter
+    batch_size = config['train']['batch_size']
+    heatmap_res = config['train']['output_res']
+    im_sz = config['inference']['inp_dim']
+    
+    print(f"Batch size: {batch_size}, Heatmap resolution: {heatmap_res}, Image size: {im_sz}")
 
     train_dir = '/content/drive/MyDrive/MM/point_localization/VHS-Top-5286-Eric/Train'
     test_dir = '/content/drive/MyDrive/MM/point_localization/VHS-Top-5286-Eric/Test'
-    heatmap_res = config['train']['output_res']
     # Initialize your CoordinateDataset and DataLoader here
-    im_sz = config['inference']['inp_dim']
     train_dataset = CoordinateDataset(root_dir=train_dir, im_sz=im_sz,\
             output_res=heatmap_res, augment=True, only10=config['opt']['only10'])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
@@ -140,8 +144,12 @@ def train(train_func, config, post_epoch=None):
             show_range = tqdm.tqdm(range(num_step), total=num_step, ascii=True)
             for i in show_range:
                 images, heatmaps = next(iter(loader))
+                print(f"Loaded data - Image shape: {images.shape}, Heatmap shape: {heatmaps.shape}")
                 datas = {'imgs': images, 'heatmaps': heatmaps}
                 train_outputs = train_func(i, config, phase, **datas)
+
+                if 'predictions' in train_outputs:
+                    print(f"Model output shape: {[p.shape for p in train_outputs['predictions']]}")
 
                 if config['opt']['use_wandb']:
                     metrics = {

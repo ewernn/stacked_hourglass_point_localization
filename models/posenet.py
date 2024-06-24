@@ -21,10 +21,14 @@ class PoseNet(nn.Module):
     def __init__(self, nstack, inp_dim, oup_dim, bn=False, increase=0, **kwargs):
         super(PoseNet, self).__init__()
         
+        self.nstack = nstack
         self.inp_dim = inp_dim
         self.oup_dim = oup_dim
+        self.output_res = kwargs.get('output_res', 250)  # Default to 250 if not provided
+        
+        # Print the output resolution for debugging
+        print(f"Output resolution set to: {self.output_res}")
 
-        self.nstack = nstack
         self.pre = nn.Sequential(
             Conv(1, 64, 7, 2, bn=True, relu=True),
             Residual(64, 128),
@@ -62,6 +66,8 @@ class PoseNet(nn.Module):
             combined_hm_preds.append(preds)
             if i < self.nstack - 1:
                 x = x + self.merge_preds[i](preds) + self.merge_features[i](feature)
+        # Print the shape of the output for debugging
+        print(f"Output shape from forward: {[o.shape for o in combined_hm_preds]}")
         return torch.stack(combined_hm_preds, 1)
 
     # def heatmapLoss.forward(self, pred, gt):
