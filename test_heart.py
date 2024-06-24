@@ -35,30 +35,34 @@ def draw_predictions(img_tensor, pred_keypoints, true_points, config, save_path=
     oup_dim = pred_keypoints.shape[1]  # Number of keypoints
     
     im_sz = config['inference']['inp_dim']
+    output_res = config['train']['output_res']
     
     # Draw predicted keypoints from each stack
     for stack in range(nstack):
         if stack != nstack-1: continue
         for k in range(oup_dim):
             x, y, conf = pred_keypoints[stack, k]
-            x, y = int(x * im_sz), int(y * im_sz)
+            # Scale from heatmap coordinates to image coordinates
+            x, y = int(x * im_sz / output_res), int(y * im_sz / output_res)
             print(f"Predicted: {x}, {y}")
-            draw_cross(img, (x, y), (0, 0, 255))  # Red color for predicted points
+            cv2.circle(img, (x, y), 5, (0, 0, 255), -1)  # Red filled circle for predicted points
+            cv2.putText(img, f"P{k}", (x+5, y+5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
 
     # Draw true points
     true_points = true_points.squeeze(0)  # Remove batch dimension
-    for point in true_points:
+    for k, point in enumerate(true_points):
         x, y = point
         x, y = int(x * im_sz), int(y * im_sz)
         print(f"Actual: {x}, {y}")
-        draw_cross(img, (x, y), (0, 255, 0))  # Green color for true points
+        cv2.circle(img, (x, y), 5, (0, 255, 0), -1)  # Green filled circle for true points
+        cv2.putText(img, f"T{k}", (x+5, y+5), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 1)
 
     plt.figure(figsize=(10, 10))
     plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     plt.axis('off')  # Turn off the axis
 
     if save_path:
-        plt.savefig(save_path, bbox_inches='tight', pad_inches=0)
+        plt.savefig(save_path, bbox_inches='tight', pad_inches=0, dpi=300)
         plt.close()  # Close the figure to free memory
 
     return img
@@ -116,9 +120,10 @@ def main():
         pred_keypoints = extract_keypoints_from_heatmaps(config, preds)
 
         im_sz = config['inference']['inp_dim']
+        output_res = config['train']['output_res']
         
-        # Scale predictions to image size
-        pred_keypoints_scaled = pred_keypoints.clone().cpu()[:, :, :2] * im_sz
+        # Scale predictions to image size for MSE calculation
+        pred_keypoints_scaled = pred_keypoints.clone().cpu()[:, :, :2] * im_sz / output_res
 
         # Print predicted and actual values
         print(f"Image {i}:")
