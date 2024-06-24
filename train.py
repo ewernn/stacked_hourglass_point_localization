@@ -85,7 +85,7 @@ def save_checkpoint(state, is_best, filename='checkpoint.pt'):
 def save(config):
     config['inference']['net'].eval()
     # resume = os.path.join('exp', config['opt']['exp'])
-    resume = '/content/drive/MyDrive/point_localization/exps'
+    resume = '/content/drive/MyDrive/MM/point_localization/exps'
     if config['opt']['continue_exp'] is not None:  # don't overwrite the original exp I guess ??
         resume = os.path.join(resume, config['opt']['continue_exp'])
     else:
@@ -105,8 +105,8 @@ def train(train_func, config, post_epoch=None):
     
     batch_size = config['train']['batch_size']  # Example of using a hyperparameter
 
-    train_dir = '/content/drive/MyDrive/point_localization/VHS-Top-5286-Eric/Train'
-    test_dir = '/content/drive/MyDrive/point_localization/VHS-Top-5286-Eric/Test'
+    train_dir = '/content/drive/MyDrive/MM/point_localization/VHS-Top-5286-Eric/Train'
+    test_dir = '/content/drive/MyDrive/MM/point_localization/VHS-Top-5286-Eric/Test'
     heatmap_res = config['train']['output_res']
     # Initialize your CoordinateDataset and DataLoader here
     im_sz = config['inference']['inp_dim']
