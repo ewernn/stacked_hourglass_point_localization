@@ -33,26 +33,27 @@ def draw_predictions(img_tensor, pred_keypoints, true_points, config, save_path=
 
     nstack = pred_keypoints.shape[0]  # Number of stacks
     oup_dim = pred_keypoints.shape[1]  # Number of keypoints
-    # preds are in range [0,63].  true_points are in range [0,1]
-    scale_factor_pred = config['inference']['inp_dim'] / config['train']['output_res']
-    scale_factor_true = config['inference']['inp_dim']
+    
+    im_sz = config['inference']['inp_dim']
+    
     # Draw predicted keypoints from each stack
     for stack in range(nstack):
         if stack != nstack-1: continue
         for k in range(oup_dim):
             x, y, conf = pred_keypoints[stack, k]
-            #print(f"abc: {x}, {y}")
-            x, y = int(x * scale_factor_pred), int(y * scale_factor_pred)
+            x, y = int(x * im_sz), int(y * im_sz)
+            print(f"Predicted: {x}, {y}")
             draw_cross(img, (x, y), (0, 0, 255))  # Red color for predicted points
 
     # Draw true points
     true_points = true_points.squeeze(0)  # Remove batch dimension
     for point in true_points:
         x, y = point
-        #print(f"efg: {x}, {y}")
-        x, y = int(x * scale_factor_true), int(y * scale_factor_true)
+        x, y = int(x * im_sz), int(y * im_sz)
+        print(f"Actual: {x}, {y}")
         draw_cross(img, (x, y), (0, 255, 0))  # Green color for true points
 
+    plt.figure(figsize=(10, 10))
     plt.imshow(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     plt.axis('off')  # Turn off the axis
 
@@ -114,18 +115,19 @@ def main():
         preds = do_inference(img_tensor, model)
         pred_keypoints = extract_keypoints_from_heatmaps(config, preds)
 
-        scale_down_factor = 1.0/config['train']['output_res']
-        pred_keypoints_scaled = pred_keypoints.clone().cpu()[:, :, :2]
-        pred_keypoints_scaled *= scale_down_factor
+        im_sz = config['inference']['inp_dim']
+        
+        # Scale predictions to image size
+        pred_keypoints_scaled = pred_keypoints.clone().cpu()[:, :, :2] * im_sz
 
         # Print predicted and actual values
         print(f"Image {i}:")
         print("Predicted points:")
         print(pred_keypoints_scaled[-1])  # Use the last stack's predictions
         print("Actual points:")
-        print(true_points[0])  # Remove batch dimension
+        print(true_points[0] * im_sz)  # Scale true points to image size
 
-        mse = torch.mean((pred_keypoints_scaled - true_points.clone()[0]) ** 2).item()
+        mse = torch.mean((pred_keypoints_scaled[-1] - true_points[0] * im_sz) ** 2).item()
 
         save_dir = '/content/drive/MyDrive/MM/point_localization/exps/dog_heart_1000/'
         save_path = os.path.join(save_dir, f'img_{i}.png')
@@ -134,6 +136,7 @@ def main():
 
         print(f"MSE for image {save_path}: {mse}")
         print()  # Add a blank line for better readability between images
+
 
 if __name__ == '__main__':
     main()
