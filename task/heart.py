@@ -78,6 +78,11 @@ def make_network(configs):
     train_cfg = configs['train']
     config = configs['inference']
 
+    print("Training configuration:")
+    print(train_cfg)
+    print("Inference configuration:")
+    print(config)
+
     def calc_loss(*args, **kwargs):
         return poseNet.calc_loss(*args, **kwargs)
         # loss = poseNet.calc_loss(*args, **kwargs)
@@ -85,6 +90,11 @@ def make_network(configs):
     
     PoseNet = importNet(configs['network'])
     poseNet = PoseNet(**config)
+    
+    # Print the model architecture
+    print("Model Architecture:")
+    print(poseNet)
+    
     forward_net = poseNet.cuda()
     if torch.cuda.device_count() > 1:
         forward_net = DataParallel(forward_net)
@@ -121,7 +131,8 @@ def make_network(configs):
         # to prevent running stats from getting updated.
         if phase == 'valid':
             for module in net.modules():
-                if isinstance(module, nn.BatchNorm2d):
+                #if isinstance(module, nn.BatchNorm2d):
+                if isinstance(module in nn.BatchNorm2d):
                     module.eval()
 #  ERIC: which phase is being used??
         if phase != 'inference':
