@@ -16,7 +16,7 @@ __config__ = {
     'network': 'models.posenet.PoseNet',
     'inference': {
         'nstack': 4,
-        'inp_dim': 300,
+        'inp_dim': 1000,  # Changed from 300 to 1000
         'oup_dim': 3,
         'num_parts': 3,
         'increase': 0,
@@ -27,8 +27,8 @@ __config__ = {
         'epoch_num': 300,
         'learning_rate': .00002,#02133,
         'batch_size': 4,
-        'input_res': 300,
-        'output_res': 75,
+        'input_res': 1000,  # Changed from 300 to 1000
+        'output_res': 250,  # Changed from 75 to 250
         'train_iters': 1000,
         'valid_iters': 10,
         'max_num_people' : 1,
@@ -80,8 +80,6 @@ def make_network(configs):
 
     def calc_loss(*args, **kwargs):
         return poseNet.calc_loss(*args, **kwargs)
-        # loss = poseNet.calc_loss(*args, **kwargs)
-        # return {"total_loss": loss}
     
     PoseNet = importNet(configs['network'])
     poseNet = PoseNet(**config)
@@ -94,8 +92,8 @@ def make_network(configs):
     train_cfg['optimizer'] = torch.optim.Adam(filter(lambda p: p.requires_grad, config['net'].parameters()), lr=learning_rate)
     
     ## optimizer, experiment setup
-    exp_path = '/content/drive/MyDrive/MM/EqNeck3pts/exps'
-    if configs['opt']['continue_exp'] is not None:  # don't overwrite the original exp I guess ??
+    exp_path = '/content/drive/MyDrive/MM/EqNeck/EqNeck3pts/exps2'  # Changed to match heart.py
+    if configs['opt']['continue_exp'] is not None:
         exp_path = os.path.join(exp_path, configs['opt']['continue_exp'])
     else:
         exp_path = os.path.join(exp_path, configs['opt']['exp'])

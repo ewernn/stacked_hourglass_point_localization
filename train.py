@@ -37,11 +37,11 @@ sweep_config = {
     },
     'parameters': {
         'learning_rate': {
-            'min': 0.00002,
-            'max': 0.0002
+            'min': 0.00005,
+            'max': 0.001
         },
         'batch_size': {
-            'values': [2,4]
+            'values': [4]
         },
         # Add other hyperparameters here
     }
@@ -84,15 +84,13 @@ def save_checkpoint(state, is_best, filename='checkpoint.pt'):
 
 def save(config):
     config['inference']['net'].eval()
-    # resume = os.path.join('exp', config['opt']['exp'])
-    resume = '/content/drive/MyDrive/MM/exps'
-    if config['opt']['continue_exp'] is not None:  # don't overwrite the original exp I guess ??
+    resume = '/content/drive/MyDrive/MM/point_localization/exps'
+    if config['opt']['continue_exp'] is not None:
         resume = os.path.join(resume, config['opt']['continue_exp'])
     else:
         resume = os.path.join(resume, config['opt']['exp'])
     lr_, bs_, = config['train']['learning_rate'], config['train']['batch_size']
     resume_file = os.path.join(resume, f'checkpoint_{lr_}_{bs_}.pt')
-    # resume_file = '/content/drive/MyDrive/point_localization/exps/checkpoint.pt'
     
     save_checkpoint({
             'state_dict': config['inference']['net'].state_dict(),
@@ -102,18 +100,20 @@ def save(config):
     print(f'=> save checkpoint at {resume_file}')
 
 def train(train_func, config, post_epoch=None):
+    print("Training configuration:")
+    print(config['train'])
     
-    batch_size = config['train']['batch_size']  # Example of using a hyperparameter
-
-    train_dir = '/content/drive/MyDrive/MM/EqNeck3pts/Train'
-    test_dir = '/content/drive/MyDrive/MM/EqNeck3pts/Test'
+    batch_size = config['train']['batch_size']
     heatmap_res = config['train']['output_res']
-    # Initialize your CoordinateDataset and DataLoader here
     im_sz = config['inference']['inp_dim']
+    
+    print(f"Batch size: {batch_size}, Heatmap resolution: {heatmap_res}, Image size: {im_sz}")
+
+    train_dir = '/content/drive/MyDrive/MM/point_localization/VHS-Top-5286-Eric/Train'
+    test_dir = '/content/drive/MyDrive/MM/point_localization/VHS-Top-5286-Eric/Test'
     train_dataset = CoordinateDataset(root_dir=train_dir, im_sz=im_sz,\
             output_res=heatmap_res, augment=True, only10=config['opt']['only10'])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
-    #train_loader = DataLoader(train_dataset, batch_size=config['train']['batchsize'], shuffle=True, num_workers=4)
 
     valid_dataset = CoordinateDataset(root_dir=test_dir, im_sz=im_sz,\
             output_res=heatmap_res, augment=False, only10=config['opt']['only10'])
@@ -125,13 +125,7 @@ def train(train_func, config, post_epoch=None):
             if config['train']['epoch'] > config['train']['epoch_num']:
                 break
 
-        # Initialize or reset variables to track epoch-wise metrics if necessary
-
         for phase in ['train', 'valid']:
-            # Correct the validation frequency as per your requirement
-            # if phase == 'valid' and config['train']['epoch'] % 1 != 0:
-            #     continue  # Skip validation as per the condition
-
             loader = train_loader if phase == 'train' else valid_loader
             num_step = len(loader)
 
@@ -140,39 +134,36 @@ def train(train_func, config, post_epoch=None):
             show_range = tqdm.tqdm(range(num_step), total=num_step, ascii=True)
             for i in show_range:
                 images, heatmaps = next(iter(loader))
+                print(f"Loaded data - Image shape: {images.shape}, Heatmap shape: {heatmaps.shape}")
                 datas = {'imgs': images, 'heatmaps': heatmaps}
                 train_outputs = train_func(i, config, phase, **datas)
+
+                if 'predictions' in train_outputs:
+                    print(f"Model output shape: {[p.shape for p in train_outputs['predictions']]}")
 
                 if config['opt']['use_wandb']:
                     metrics = {
                         "epoch": config['train']['epoch'],
                         "total_loss": train_outputs["total_loss"].item(),
-                        # "basic_loss": train_outputs["basic_loss"].item(),
-                        # "focused_loss": train_outputs["focused_loss"].item(),
                         "learning_rate": config['train']['learning_rate'],
                         "batch_size": config['train']['batch_size']
                     }
-                    # Optionally differentiate between training and validation metrics
                     prefix = f"{phase}_"
                     wandb.log({prefix + key: value for key, value in metrics.items()})
             
             if phase == 'valid':
-                # Calculate average validation loss for the current epoch
                 avg_val_loss = sum([train_outputs["total_loss"].item() for _ in show_range]) / len(show_range)
 
-                # Update best validation loss and save model conditionally
                 if avg_val_loss < config['train']['best_val_loss']:
                     config['train']['best_val_loss'] = avg_val_loss
                     print(f"New best validation loss: {avg_val_loss}. Saving model...")
-                    save(config)  # Save the model as a new best is found
+                    save(config)
 
-        # Increment the epoch counter at the end of each epoch
         config['train']['epoch'] += 1
 
 
 def init(opt):
-    # opt is now passed as an argument
-    task = importlib.import_module('task.eq_neck')
+    task = importlib.import_module('task.heart')
     config = task.__config__
 
     opt_dict = vars(opt)
@@ -187,7 +178,6 @@ def train_with_wandb(task, config):
     config_copy['train']['epoch'] = 0
     wandb.init(config=config_copy)
 
-    # Manually update the learning rate and batch size from wandb.config
     config_copy['train']['learning_rate'] = wandb.config.get('learning_rate', config_copy['train']['learning_rate'])
     config_copy['train']['batch_size'] = wandb.config.get('batch_size', config_copy['train']['batch_size'])
 
@@ -201,23 +191,20 @@ def train_with_wandb(task, config):
 
 
 def main():
-    opt = parse_command_line()  # Parse command line arguments
+    opt = parse_command_line()
     task, config = init(opt)
 
     if opt.use_wandb:
         if opt.no_sweep:
-            # Track the run without a sweep
             wandb.init(project="2hg-hyperparam-sweep", config=config)
             train_func = task.make_network(config)
             reload(config)
             train(train_func, config)
             wandb.finish()
         else:
-            # Use sweep
             sweep_id = wandb.sweep(sweep_config, project="2hg-hyperparam-sweep")
             wandb.agent(sweep_id, lambda: train_with_wandb(task, config))
     else:
-        # Proceed without WandB
         train_func = task.make_network(config)
         reload(config)
         train(train_func, config)
