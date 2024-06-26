@@ -20,7 +20,7 @@ from models.layers import Hourglass
 def parse_command_line():
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--continue_exp', type=str, help='continue exp')
-    parser.add_argument('-e', '--exp', type=str, default='heart', help='experiments name')
+    parser.add_argument('-e', '--exp', type=str, default='eq_neck', help='experiments name')
     parser.add_argument('-m', '--max_iters', type=int, default=250, help='max number of iterations (thousands)')
     parser.add_argument('-p', '--pretrained_model', type=str, help='path to pretrained model')
     parser.add_argument('-o', '--only10', type=bool, default=False, help='only use 10 images')
@@ -84,7 +84,9 @@ def save_checkpoint(state, is_best, filename='checkpoint.pt'):
 
 def save(config):
     config['inference']['net'].eval()
-    resume = '/content/drive/MyDrive/MM/point_localization/exps'
+
+    resume = '/content/drive/MyDrive/MM/EqNeck/exps2'
+
     if config['opt']['continue_exp'] is not None:
         resume = os.path.join(resume, config['opt']['continue_exp'])
     else:
@@ -109,13 +111,13 @@ def train(train_func, config, post_epoch=None):
     
     print(f"Batch size: {batch_size}, Heatmap resolution: {heatmap_res}, Image size: {im_sz}")
 
-    train_dir = '/content/drive/MyDrive/MM/point_localization/VHS-Top-5286-Eric/Train'
-    test_dir = '/content/drive/MyDrive/MM/point_localization/VHS-Top-5286-Eric/Test'
-    train_dataset = CoordinateDataset(root_dir=train_dir, im_sz=im_sz,\
+    data_dir = '/content/drive/MyDrive/MM/EqNeck/EqNeckImages/'
+
+    train_dataset = CoordinateDataset(root_dir=data_dir, csv='Train', im_sz=im_sz,\
             output_res=heatmap_res, augment=True, only10=config['opt']['only10'])
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4)
 
-    valid_dataset = CoordinateDataset(root_dir=test_dir, im_sz=im_sz,\
+    valid_dataset = CoordinateDataset(root_dir=data_dir, csv='Test', im_sz=im_sz,\
             output_res=heatmap_res, augment=False, only10=config['opt']['only10'])
     valid_loader = DataLoader(valid_dataset, batch_size=batch_size, shuffle=False, num_workers=4)
 
@@ -163,7 +165,7 @@ def train(train_func, config, post_epoch=None):
 
 
 def init(opt):
-    task = importlib.import_module('task.heart')
+    task = importlib.import_module('task.eq_neck')
     config = task.__config__
 
     opt_dict = vars(opt)
@@ -190,19 +192,33 @@ def train_with_wandb(task, config):
     wandb.finish()
 
 
+def print_config(config):
+    print("=== Configuration ===")
+    print(f"Input dimension: {config['inference']['inp_dim']}")
+    print(f"Output dimension: {config['inference']['oup_dim']}")
+    print(f"Number of stacks: {config['inference']['nstack']}")
+    print(f"Input resolution: {config['train']['input_res']}")
+    print(f"Output resolution: {config['train']['output_res']}")
+    print(f"Batch size: {config['train']['batch_size']}")
+    print(f"Learning rate: {config['train']['learning_rate']}")
+    print("=====================")
+
 def main():
     opt = parse_command_line()
     task, config = init(opt)
 
+    print_config(config)  # Add this line to print the configuration
+
+
     if opt.use_wandb:
         if opt.no_sweep:
-            wandb.init(project="2hg-hyperparam-sweep", config=config)
+            wandb.init(project="eq_1000", config=config)
             train_func = task.make_network(config)
             reload(config)
             train(train_func, config)
             wandb.finish()
         else:
-            sweep_id = wandb.sweep(sweep_config, project="2hg-hyperparam-sweep")
+            sweep_id = wandb.sweep(sweep_config, project="eq_1000-hyperparam-sweep")
             wandb.agent(sweep_id, lambda: train_with_wandb(task, config))
     else:
         train_func = task.make_network(config)
