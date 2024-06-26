@@ -17,7 +17,7 @@ __config__ = {
     'inference': {
         'nstack': 2,
         'inp_dim': 1000,  # Changed from 300 to 1000
-        'oup_dim': 3,
+        'oup_dim': 8,
         'num_parts': 3,
         'increase': 0,
         'keys': ['imgs']

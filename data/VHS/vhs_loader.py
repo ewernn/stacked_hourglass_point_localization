@@ -57,10 +57,11 @@ class CoordinateDataset(Dataset):
         return image_tensor, heatmaps
 
     def generate_heatmaps(self, points, output_res):
-        num_keypoints = len(points)
-        heatmaps = np.zeros((num_keypoints, output_res, output_res), dtype=np.float32)
-        for i, point in enumerate(points):
-            x, y = int(point[0] * output_res), int(point[1] * output_res)
+        max_keypoints = 8  # Set this to the maximum number of keypoints you expect
+        num_keypoints = min(len(points), max_keypoints)
+        heatmaps = np.zeros((max_keypoints, output_res, output_res), dtype=np.float32)
+        for i in range(num_keypoints):
+            x, y = int(points[i, 0] * output_res), int(points[i, 1] * output_res)
             if 0 <= x < output_res and 0 <= y < output_res:
                 heatmaps[i, y, x] = 1
                 heatmaps[i] = ndimage.gaussian_filter(heatmaps[i], sigma=1)
