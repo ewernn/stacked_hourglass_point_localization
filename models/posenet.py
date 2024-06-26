@@ -61,50 +61,22 @@ class PoseNet(nn.Module):
                 x = x + self.merge_preds[i](preds) + self.merge_features[i](feature)
         return torch.stack(combined_hm_preds, 1)
 
-    # def heatmapLoss.forward(self, pred, gt):
-    #     l = ((pred - gt)**2)
-    #     l = l.mean(dim=3).mean(dim=2).mean(dim=1)
-    #     return l
     def calc_loss(self, combined_hm_preds, heatmaps):
-        # combined_hm_preds shape: [bs, nstack, oup_dim, output_res, output_res]
-        # heatmaps shape: [bs, oup_dim, output_res, output_res]
-
         def heatmapLoss(pred, gt):
-            # pred shape: [bs, oup_dim, output_res, output_res]
-            # gt shape:  [bs, oup_dim, output_res, output_res]
-
-
-            #weights = torch.tensor([1.1, 1.1, 1, 1, 1, 1]).view(1, -1, 1, 1)
-            # Ensure weights are on the same device as your predictions (e.g., CPU or CUDA)
-            #weights = weights.to(pred.device)
-            # Calculate weighted squared differences
-            weighted_squared_diff = (pred - gt)**2# * weights
-            # Compute the mean, taking into account the weighted differences
-            total_loss = weighted_squared_diff.mean(dim=3).mean(dim=2).mean(dim=1)
-
-            return {'total_loss': total_loss}#, 'basic_loss': basic_loss, 'focused_loss': focused_loss}
+            mask = (gt.sum(dim=(2, 3)) > 0).float().unsqueeze(2).unsqueeze(3)
+            weighted_squared_diff = ((pred - gt) ** 2) * mask
+            total_loss = weighted_squared_diff.sum() / (mask.sum() + 1e-6)
+            return {'total_loss': total_loss}
 
         combined_total_loss = []
-        combined_basic_loss = []
-        combined_focused_loss = []
 
         for i in range(self.nstack):
-            # for a single batch
-            #loss_outputs = self.heatmapLoss(combined_hm_preds[0][:,i], heatmaps)
-            loss_outputs = heatmapLoss(combined_hm_preds[0][:,i], heatmaps)
+            loss_outputs = heatmapLoss(combined_hm_preds[:, i], heatmaps)
             combined_total_loss.append(loss_outputs["total_loss"])
-            # combined_basic_loss.append(loss_outputs["basic_loss"])
-            # combined_focused_loss.append(loss_outputs["focused_loss"])
 
-        # Stack the total, basic, and focused losses separately
-        combined_total_loss = torch.stack(combined_total_loss, dim=1)
-        # combined_basic_loss = torch.stack(combined_basic_loss, dim=1)
-        # combined_focused_loss = torch.stack(combined_focused_loss, dim=0)
+        combined_total_loss = torch.stack(combined_total_loss, dim=0)
 
-        # Return a dictionary containing the combined losses
         return {
-            # "combined_basic_loss": combined_basic_loss,
-            # "combined_focused_loss": combined_focused_loss,
             "combined_total_loss": combined_total_loss
         }
 

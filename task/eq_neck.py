@@ -15,7 +15,7 @@ __config__ = {
     'data_provider': 'data.MPII.dp',
     'network': 'models.posenet.PoseNet',
     'inference': {
-        'nstack': 4,
+        'nstack': 2,
         'inp_dim': 1000,  # Changed from 300 to 1000
         'oup_dim': 3,
         'num_parts': 3,
@@ -24,9 +24,9 @@ __config__ = {
     },
 
     'train': {
-        'epoch_num': 300,
+        'epoch_num': 20,
         'learning_rate': .00002,#02133,
-        'batch_size': 4,
+        'batch_size': 2,
         'input_res': 1000,  # Changed from 300 to 1000
         'output_res': 250,  # Changed from 75 to 250
         'train_iters': 1000,
@@ -70,6 +70,8 @@ class Trainer(nn.Module):
             if type(combined_hm_preds)!=list and type(combined_hm_preds)!=tuple:
                 combined_hm_preds = [combined_hm_preds]
             true_heatmaps = labels['heatmaps']
+            print("Shape of combined_hm_preds:", [p.shape for p in combined_hm_preds])
+            print("Shape of true_heatmaps:", true_heatmaps.shape)
             loss = self.calc_loss(combined_hm_preds, true_heatmaps)
 
             return list(combined_hm_preds) + list([loss])
@@ -92,7 +94,7 @@ def make_network(configs):
     train_cfg['optimizer'] = torch.optim.Adam(filter(lambda p: p.requires_grad, config['net'].parameters()), lr=learning_rate)
     
     ## optimizer, experiment setup
-    exp_path = '/content/drive/MyDrive/MM/EqNeck/EqNeck3pts/exps2'  # Changed to match heart.py
+    exp_path = '/content/drive/MyDrive/MM/EqNeck/exps2'  # Changed to match heart.py
     if configs['opt']['continue_exp'] is not None:
         exp_path = os.path.join(exp_path, configs['opt']['continue_exp'])
     else:

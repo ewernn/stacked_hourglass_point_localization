@@ -19,13 +19,14 @@ def image_open_bw(img_path):
         return img.convert('L')
 
 class CoordinateDataset(Dataset):
-    def __init__(self, root_dir, im_sz, output_res, augment=False, num_workers=32, only10=False, testing=False):
+    def __init__(self, root_dir, csv, im_sz, output_res, augment=False, num_workers=32, only10=False, testing=False):
         self.root_dir = root_dir
         self.im_sz = im_sz
         self.output_res = output_res
         self.augment = augment
         self.testing = testing
-        csv_file = os.path.join(root_dir, 'Data.csv')
+        csv_path = f"Data_{csv}.csv"
+        csv_file = os.path.join(root_dir, csv_path)
         self.data_frame = pd.read_csv(csv_file, header=0).head(10) if only10 else pd.read_csv(csv_file, header=0)
 
         image_paths = [os.path.join(self.root_dir, img_name) for img_name in self.data_frame.iloc[:, 0]]
@@ -38,29 +39,28 @@ class CoordinateDataset(Dataset):
     def __getitem__(self, idx):
         image = self.images[idx]
         points = self.data_frame.iloc[idx, 1:].values.astype('float').reshape(-1, 2)
-
+        
+        # Filter out NaN values
+        valid_points = points[~np.isnan(points).any(axis=1)]
+        
         if self.augment:
-            image, points = custom_transform(image, points)
+            image, valid_points = custom_transform(image, valid_points)
 
         image_tensor = transforms.Compose([
-            # transforms.Resize((self.im_sz, self.im_sz)),
-            # transforms.Grayscale(num_output_channels=3),
             transforms.ToTensor(),
         ])(image)
 
-        #image_tensor = F.pad(image_tensor, (0, 1, 0, 1), value=0)
+        heatmaps = self.generate_heatmaps(valid_points, self.output_res)
 
-        heatmaps = self.generate_heatmaps(points, self.output_res)
-
-        if self.testing: return image_tensor, points
+        if self.testing: return image_tensor, valid_points
 
         return image_tensor, heatmaps
 
     def generate_heatmaps(self, points, output_res):
         num_keypoints = len(points)
         heatmaps = np.zeros((num_keypoints, output_res, output_res), dtype=np.float32)
-        for i in range(num_keypoints):
-            x, y = int(points[i, 0] * output_res), int(points[i, 1] * output_res)
+        for i, point in enumerate(points):
+            x, y = int(point[0] * output_res), int(point[1] * output_res)
             if 0 <= x < output_res and 0 <= y < output_res:
                 heatmaps[i, y, x] = 1
                 heatmaps[i] = ndimage.gaussian_filter(heatmaps[i], sigma=1)
